@@ -28,7 +28,7 @@ const Server = () => {
   // Body parser
   app.use(express.json({ limit: '50mb', extended: true }));
   app.use(express.urlencoded({ extended: true }));
-  if (process.env.NODE_ENV === 'dev') app.use(morgan('dev'));
+  app.use(morgan('dev'));
   // Variables
   let server = undefined;
   // Init Routes

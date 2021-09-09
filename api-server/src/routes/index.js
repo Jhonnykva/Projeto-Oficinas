@@ -1,7 +1,7 @@
 const usuario = require('./usuario');
 
 const initRoutes = (app) => {
-  const BASE_URL = process.env.BASE_URL || '';
+  const BASE_URL = process.env.BASE_URL || '/api/v1';
   // Rutas
   app.use(`${BASE_URL}/usuario`, usuario);
 

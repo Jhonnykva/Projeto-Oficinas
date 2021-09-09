@@ -11,19 +11,21 @@ const UsuarioSchema = mongoose.Schema(
     sobrenome: {
       type: String,
       required: true,
-      select: false,
     },
     email: {
       type: String,
       required: true,
+      unique: true,
     },
     alias: {
       type: String,
       required: true,
+      unique: true,
     },
     pass: {
       type: String,
       required: true,
+      select: false,
     },
   },
   {
@@ -43,7 +45,7 @@ UsuarioSchema.pre('save', async function (next) {
 });
 
 // Sign JWT and return
-UsuarioSchema.methods.getSignedJwtToken = function (time = '1d') {
+UsuarioSchema.methods.getSignedJwtToken = function (time) {
   return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
     expiresIn: time,
   });
