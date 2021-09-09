@@ -1,14 +1,14 @@
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/asyncHandler');
 const Cadeado = require('../models/Cadeado');
-const { mongo } = require('mongoose');
+const mongoose = require('mongoose');
 
 // @description   Retorna todos os cadeados associados ao usuario
 // @route         GET /cadeado
 // @access        Privada
 exports.getCadeados = asyncHandler(async (req, res, next) => {
   const cadeado = await Cadeado.find({
-    id_usuario: mongo.ObjectId(req.user.id),
+    id_usuario: new mongoose.Types.ObjectId(req.user.id),
   });
 
   res.status(200).json({ data: cadeado });
@@ -30,18 +30,17 @@ exports.registerCadeado = asyncHandler(async (req, res, next) => {
 });
 
 // @description   Obtem cadeado por ID
-// @route         POST /cadeado/:id
+// @route         POST /cadeado/:id_cadeado
 // @access        Privada
 exports.getCadeado = asyncHandler(async (req, res, next) => {
-  if (typeof req.params.id !== 'string')
+  const id = req.params.id_cadeado;
+  if (typeof id !== 'string')
     return next(new ErrorResponse('ID inválido', 400));
 
-  let cadeado = await Cadeado.findById(req.params.id);
+  let cadeado = await Cadeado.findById(id);
 
   if (!cadeado)
-    return next(
-      new ErrorResponse(`Cadeado ${req.params.id} não encontrado`, 404)
-    );
+    return next(new ErrorResponse(`Cadeado ${id} não encontrado`, 404));
 
   if (String(cadeado.id_usuario) !== String(req.user.id))
     return next(new ErrorResponse(`Não autorizado`, 403));
@@ -50,23 +49,22 @@ exports.getCadeado = asyncHandler(async (req, res, next) => {
 });
 
 // @description   Atualiza dados do cadeado
-// @route         POST /cadeado/:id
+// @route         POST /cadeado/:id_cadeado
 // @access        Privada
 exports.updateCadeado = asyncHandler(async (req, res, next) => {
-  if (typeof req.params.id !== 'string')
+  const id = req.params.id_cadeado;
+  if (typeof id !== 'string')
     return next(new ErrorResponse('ID inválido', 400));
 
-  let cadeado = await Cadeado.findById(req.params.id);
+  let cadeado = await Cadeado.findById(id);
 
   if (!cadeado)
-    return next(
-      new ErrorResponse(`Cadeado ${req.params.id} não encontrado`, 404)
-    );
+    return next(new ErrorResponse(`Cadeado ${id} não encontrado`, 404));
 
   if (String(cadeado.id_usuario) !== String(req.user.id))
     return next(new ErrorResponse(`Não autorizado`, 403));
 
-  cadeado = await Cadeado.findByIdAndUpdate(req.params.id, req.body, {
+  cadeado = await Cadeado.findByIdAndUpdate(id, req.body, {
     new: true,
     runValidators: true,
   });
