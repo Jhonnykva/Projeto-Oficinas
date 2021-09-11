@@ -96,3 +96,21 @@ exports.getLiberadorQR = asyncHandler(async (req, res, next) => {
   const qr = await QrCode.toDataURL(liberador.cod_liberador);
   res.status(200).json({ data: qr });
 });
+
+// @description   Retorna se o id do liberador é válido
+// @route         POST /liberador/:id_liberador/valido
+// @access        Privada (Cadeado)
+exports.isLiberadorVálido = asyncHandler(async (req, res, next) => {
+  const id = req.params.id_liberador;
+  if (typeof id !== 'string')
+    return next(new ErrorResponse('ID inválido', 400));
+
+  let liberador = await Liberador.findById(id);
+  if (!liberador)
+    return next(new ErrorResponse(`Liberador ${id} não encontrado`, 404));
+
+  if (!liberador.ativo)
+    return next(new ErrorResponse(`Liberador ${id} inválido`, 400));
+
+  res.status(200).json({ valido: true });
+});

@@ -22,6 +22,11 @@ const LiberadorSchema = mongoose.Schema(
       ref: 'Cadeado',
       required: true,
     },
+    ativo: {
+      type: Boolean,
+      required: true,
+      default: true,
+    },
   },
   {
     toJSON: { virtuals: true },

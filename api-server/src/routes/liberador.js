@@ -5,6 +5,7 @@ const {
   updateLiberador,
   getLiberador,
   getLiberadorQR,
+  isLiberadorVálido,
 } = require('../controllers/liberador');
 const userAuth = require('../middleware/userAuth');
 
@@ -19,4 +20,5 @@ router
   .get(userAuth, getLiberador)
   .put(userAuth, updateLiberador);
 router.route('/:id_liberador/qr').get(userAuth, getLiberadorQR);
+router.route('/:id_liberador/valido').get(isLiberadorVálido);
 module.exports = router;
