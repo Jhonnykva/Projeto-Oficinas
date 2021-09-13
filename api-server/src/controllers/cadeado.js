@@ -71,3 +71,22 @@ exports.updateCadeado = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({ data: cadeado });
 });
+
+// @description   Retorna se o cadeado está desbloqueado
+// @route         POST /cadeado/me/desbloqueado
+// @access        Privada
+exports.isDesbloqueado = asyncHandler(async (req, res, next) => {
+  const id = req.cadeado ? req.cadeado.id : null;
+  if (typeof id !== 'string')
+    return next(new ErrorResponse('ID inválido', 400));
+
+  let cadeado = await Cadeado.findById(id);
+
+  if (!cadeado)
+    return next(new ErrorResponse(`Cadeado ${id} não encontrado`, 404));
+
+  if (String(cadeado.estado).toLowerCase() !== 'desbloqueado')
+    return next(new ErrorResponse(`Cadeado ${id} não desbloqueado`, 400));
+
+  res.status(200).json({ estado: cadeado.estado });
+});
