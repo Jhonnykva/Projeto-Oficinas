@@ -37,7 +37,9 @@ exports.getCadeado = asyncHandler(async (req, res, next) => {
   if (typeof id !== 'string')
     return next(new ErrorResponse('ID inválido', 400));
 
-  let cadeado = await Cadeado.findById(id).populate('liberadores');
+  let cadeado = await Cadeado.findById(id)
+    .populate('liberadores')
+    .populate('eventos');
 
   if (!cadeado)
     return next(new ErrorResponse(`Cadeado ${id} não encontrado`, 404));
@@ -52,6 +54,7 @@ exports.getCadeado = asyncHandler(async (req, res, next) => {
 // @route         POST /cadeado/:id_cadeado
 // @access        Privada
 exports.updateCadeado = asyncHandler(async (req, res, next) => {
+  console.log(req.body);
   const id = req.params.id_cadeado;
   if (typeof id !== 'string')
     return next(new ErrorResponse('ID inválido', 400));

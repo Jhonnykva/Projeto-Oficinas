@@ -46,6 +46,13 @@ CadeadoSchema.virtual('liberadores', {
   justOne: false,
 });
 
+CadeadoSchema.virtual('eventos', {
+  ref: 'Evento',
+  localField: '_id',
+  foreignField: 'id_cadeado',
+  justOne: false,
+});
+
 // Gera public & private ky
 CadeadoSchema.statics.getNewKeys = () => {
   const public_key = crypto.randomBytes(8).toString('hex');
