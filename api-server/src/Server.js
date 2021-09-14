@@ -2,6 +2,7 @@ const express = require('express');
 const fileUpload = require('express-fileupload');
 const colors = require('colors');
 const morgan = require('morgan');
+const cors = require('cors');
 const errorHandler = require('./middleware/errorHandler');
 const { initRoutes } = require('./routes');
 const { connectDB, disconnectDB } = require('./database/Database');
@@ -15,6 +16,8 @@ const Server = () => {
   // Inicia express
   const app = express();
   app.disable('x-powered-by');
+
+  app.use(cors());
 
   app.use(
     fileUpload({
