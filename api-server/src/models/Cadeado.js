@@ -39,6 +39,13 @@ const CadeadoSchema = mongoose.Schema(
   }
 );
 
+CadeadoSchema.virtual('liberadores', {
+  ref: 'Liberador',
+  localField: '_id',
+  foreignField: 'id_cadeado',
+  justOne: false,
+});
+
 // Gera public & private ky
 CadeadoSchema.statics.getNewKeys = () => {
   const public_key = crypto.randomBytes(8).toString('hex');

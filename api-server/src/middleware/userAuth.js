@@ -19,7 +19,6 @@ module.exports = asyncHandler(async (req, res, next) => {
   try {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // Verifica si es usuario cliente
     req.user = await Usuario.findById(decoded.id);
     return next();
   } catch (err) {

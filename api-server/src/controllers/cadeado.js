@@ -37,7 +37,7 @@ exports.getCadeado = asyncHandler(async (req, res, next) => {
   if (typeof id !== 'string')
     return next(new ErrorResponse('ID inválido', 400));
 
-  let cadeado = await Cadeado.findById(id);
+  let cadeado = await Cadeado.findById(id).populate('liberadores');
 
   if (!cadeado)
     return next(new ErrorResponse(`Cadeado ${id} não encontrado`, 404));
