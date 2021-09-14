@@ -21,8 +21,8 @@ EmptyIndicator.propTypes = {
 };
 
 EmptyIndicator.defaultProps = {
-  visible: false,
-  label: 'Sin items',
+  visible: true,
+  label: 'Sem items',
   icon: <SentimentDissatisfied />,
   labelProps: {},
 };

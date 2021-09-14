@@ -5,8 +5,10 @@ import {
   BrowserRouter as Router,
   Redirect,
 } from 'react-router-dom';
-import HomePage from './components/pages/Dashboard/Home';
-import LoginPage from './components/pages/Login';
+import CadeadosPage from './components/pages/Dashboard/CadeadosPage';
+import HomePage from './components/pages/Dashboard/HomePage';
+import LoginPage from './components/pages/LoginPage';
+import Url from './utils/Url';
 
 import { Provider } from 'react-redux';
 import { store } from './redux/store';
@@ -24,8 +26,17 @@ function App() {
           <Router>
             <Switch>
               {/* <Route exact path="/" component={<Redirect />} /> */}
-              <Route exact path="/login" component={LoginPage} />
-              <Route exact path="/dashboard" component={HomePage} />
+              <Route exact path={Url.getLoginPageUrl()} component={LoginPage} />
+              <Route
+                exact
+                path={Url.getDashboardCadeadosUrl()}
+                component={CadeadosPage}
+              />
+              <Route
+                exact
+                path={Url.getDashboardHomeUrl()}
+                component={HomePage}
+              />
             </Switch>
           </Router>
         </ThemeProvider>

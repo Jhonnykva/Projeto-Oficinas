@@ -1,7 +1,7 @@
 import { Divider, Typography, useTheme } from '@material-ui/core';
 import React from 'react';
 import getDashboardItemStyle from '../../../styles/getDashboardItemStyle';
-import UsuarioInfo from '../../usuario/UsuarioInfo';
+import Cadeados from '../../cadeado/Cadeados';
 
 const HomeItem = ({ ...props }) => {
   const theme = useTheme();
@@ -9,10 +9,9 @@ const HomeItem = ({ ...props }) => {
 
   return (
     <div {...props}>
-      <Typography variant="h4">Inicio</Typography>
+      <Typography variant="h4">Cadeados</Typography>
       <Divider />
-      <Divider />
-      <UsuarioInfo />
+      <Cadeados />
     </div>
   );
 };

@@ -11,7 +11,6 @@ import {
 } from '@material-ui/core';
 import getLoginStyle from '../../styles/getLoginStyle';
 import { login, clearLoginError } from '../../redux/actions/auth';
-import Env from '../../utils/Env';
 import LoadingIndicator from '../layout/LoadingIndicator';
 import ErrorIndicator from '../layout/ErrorIndicator';
 
@@ -29,10 +28,8 @@ const Login = ({
 
   const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
 
   useEffect(() => {
-    // if (!loading && error)
     clearLoginError();
     //eslint-disable-next-line
   }, []);
@@ -49,16 +46,12 @@ const Login = ({
     if (typeof setPassword === 'function') setPassword(e.target.value);
   };
 
-  const onSetRememberMe = (e) => {
-    if (typeof setRememberMe === 'function') setRememberMe(e.target.checked);
-  };
-
   const callLogin = () => {
-    if (!loading) onLogin(usuario, password, rememberMe);
+    if (!loading) onLogin(usuario, password);
   };
 
   const handleEnterPress = (event) => {
-    if (event.keyCode == 13 && !loading) {
+    if (event.keyCode === 13 && !loading) {
       callLogin();
     }
   };

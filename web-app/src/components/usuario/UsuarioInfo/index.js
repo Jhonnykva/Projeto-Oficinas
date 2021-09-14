@@ -11,7 +11,7 @@ const UsuarioInfo = ({ token, ...props }) => {
   const [available, setAvailable] = useState(true);
 
   const updateUsuario = async () => {
-    const usr = await getUsuario(token);
+    const usr = null; //await getUsuario(token);
     if (usr !== usuario) {
       if (available) setUsuario(usr);
     }
