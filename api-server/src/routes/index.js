@@ -1,3 +1,4 @@
+const evento = require('./evento');
 const cadeado = require('./cadeado');
 const usuario = require('./usuario');
 const liberador = require('./liberador');
@@ -7,6 +8,7 @@ const initRoutes = (app) => {
   // Rutas
   app.use(`${BASE_URL}/usuario`, usuario);
   app.use(`${BASE_URL}/cadeado`, cadeado);
+  app.use(`${BASE_URL}/evento`, evento);
   app.use(`${BASE_URL}/liberador`, liberador);
 
   // Verificação de conexão

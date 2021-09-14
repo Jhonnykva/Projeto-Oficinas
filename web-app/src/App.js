@@ -5,7 +5,9 @@ import {
   BrowserRouter as Router,
   Redirect,
 } from 'react-router-dom';
+
 import CadeadosPage from './components/pages/Dashboard/CadeadosPage';
+import CadeadoPage from './components/pages/Dashboard/CadeadoPage';
 import HomePage from './components/pages/Dashboard/HomePage';
 import LoginPage from './components/pages/LoginPage';
 import Url from './utils/Url';
@@ -31,6 +33,10 @@ function App() {
                 exact
                 path={Url.getDashboardCadeadosUrl()}
                 component={CadeadosPage}
+              />
+              <Route
+                path={Url.getDashboardCadeadoUrl(':id')}
+                component={CadeadoPage}
               />
               <Route
                 exact

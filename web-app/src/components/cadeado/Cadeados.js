@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { getCadeados, clearCadeados } from '../../redux/actions/cadeado';
@@ -22,24 +22,23 @@ const Cadeados = ({
     //eslint-disable-next-line
   }, []);
 
-  if (loading)
-    return (
+  return (
+    <Fragment>
       <LoadingIndicator
         loading={loading}
         label="Carregando cadeados..."
         {...props}
       />
-    );
-
-  if (error) return <ErrorIndicator error={error} {...props} />;
-
-  return <CadeadoList cadeados={cadeados} />;
+      <ErrorIndicator error={error} {...props} />
+      <CadeadoList cadeados={cadeados ? cadeados : []} />
+    </Fragment>
+  );
 };
 
 Cadeados.propTypes = {
   cadeados: PropTypes.array,
   loading: PropTypes.bool.isRequired,
-  error: PropTypes.string.isRequired,
+  error: PropTypes.string,
   getCadeados: PropTypes.func.isRequired,
   clearCadeados: PropTypes.func.isRequired,
 };

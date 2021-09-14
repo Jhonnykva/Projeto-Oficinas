@@ -87,7 +87,7 @@ const Login = ({
             variant="standard"
             type="password"
             id="password"
-            label="Contraseña"
+            label="Senha"
             fullWidth
             inputProps={{ readOnly }}
             value={password}

@@ -5,7 +5,7 @@ const getCadeadoStyle = (theme) => {
   const main = getMainStyle(theme);
   const login = makeStyles({
     cadeadoItemLabel: {
-      fontSize: '0.65rem',
+      fontSize: '0.75rem',
       color: '#333',
       marginRight: '0.5rem',
     },

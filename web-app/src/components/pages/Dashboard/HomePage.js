@@ -1,12 +1,12 @@
 import React from 'react';
-import HomeItem from '../../dashboard/Item/HomeItem';
+import HomeDashItem from '../../dashboard/Item/HomeDashItem';
 import DashboardMenu from '../../dashboard/Menu/DashboardMenu';
 
-const HomePage = ({ ...props }) => {
+const HomePage = ({ staticContext, ...props }) => {
   return (
     <main>
       <DashboardMenu>
-        <HomeItem {...props} />
+        <HomeDashItem {...props} />
       </DashboardMenu>
     </main>
   );

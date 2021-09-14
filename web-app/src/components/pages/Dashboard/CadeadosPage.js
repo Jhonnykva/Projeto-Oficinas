@@ -1,12 +1,12 @@
 import React from 'react';
-import CadeadosItem from '../../dashboard/Item/CadeadosItem';
+import CadeadosDashItem from '../../dashboard/Item/CadeadosDashItem';
 import DashboardMenu from '../../dashboard/Menu/DashboardMenu';
 
 const CadeadosPage = ({ ...props }) => {
   return (
     <main>
       <DashboardMenu>
-        <CadeadosItem {...props} />
+        <CadeadosDashItem {...props} />
       </DashboardMenu>
     </main>
   );

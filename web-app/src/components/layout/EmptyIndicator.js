@@ -4,6 +4,7 @@ import { Box, Typography } from '@material-ui/core';
 import { SentimentDissatisfied } from '@material-ui/icons';
 
 const EmptyIndicator = ({ visible, label, icon, labelProps, ...props }) => {
+  if (!visible) return <React.Fragment />;
   return (
     <Box {...props} display="flex" justifyContent="center" alignItems="center">
       {icon !== null ? icon : ''}

@@ -1,19 +1,20 @@
 import { Divider, Typography, useTheme } from '@material-ui/core';
 import React from 'react';
 import getDashboardItemStyle from '../../../styles/getDashboardItemStyle';
-import Cadeados from '../../cadeado/Cadeados';
+import UsuarioInfo from '../../usuario/UsuarioInfo';
 
-const HomeItem = ({ ...props }) => {
+const HomeDashItem = ({ ...props }) => {
   const theme = useTheme();
   const style = getDashboardItemStyle(theme);
 
   return (
     <div {...props}>
-      <Typography variant="h4">Cadeados</Typography>
+      <Typography variant="h4">Inicio</Typography>
       <Divider />
-      <Cadeados />
+      <Divider />
+      <UsuarioInfo />
     </div>
   );
 };
 
-export default HomeItem;
+export default HomeDashItem;

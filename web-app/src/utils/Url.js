@@ -13,6 +13,10 @@ const getLoginUrl = (host = defaultServerHost) => {
   return `${host}/usuario/login`;
 };
 
+const registerCadeadoUrl = (host = defaultServerHost) => {
+  return `${host}/cadeado`;
+};
+
 const getCadeadosUrl = (host = defaultServerHost) => {
   return `${host}/cadeado`;
 };
@@ -20,6 +24,23 @@ const getCadeadosUrl = (host = defaultServerHost) => {
 const getCadeadoByIdUrl = (id, host = defaultServerHost) => {
   return `${host}/cadeado/${id}`;
 };
+
+const updateCadeadoUrl = (id, host = defaultServerHost) => {
+  return `${host}/cadeado/${id}`;
+};
+
+const registerLiberadorUrl = (host = defaultServerHost) => {
+  return `${host}/liberador`;
+};
+
+const getLiberadorCadeadoQrCodeUrl = (id, host = defaultServerHost) => {
+  return `${host}/liberador/${id}/qr`;
+};
+
+const updateLiberadorUrl = (id, host = defaultServerHost) => {
+  return `${host}/liberador/${id}`;
+};
+
 // Front-end
 const getLoginPageUrl = (appBase = defaultAppBase) => {
   return `${appBase}/login`;
@@ -40,8 +61,13 @@ const getDashboardCadeadoUrl = (id, appBase = defaultAppBase) => {
 module.exports = {
   getUsuarioInfoUrl,
   getLoginUrl,
+  registerCadeadoUrl,
   getCadeadosUrl,
+  updateCadeadoUrl,
+  registerLiberadorUrl,
   getCadeadoByIdUrl,
+  getLiberadorCadeadoQrCodeUrl,
+  updateLiberadorUrl,
   getLoginPageUrl,
   getDashboardHomeUrl,
   getDashboardCadeadosUrl,

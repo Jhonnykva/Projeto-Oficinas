@@ -8,7 +8,7 @@ import {
 } from '../types';
 
 const initialState = {
-  loading: false,
+  loading: true,
   token: null,
   error: null,
 };
