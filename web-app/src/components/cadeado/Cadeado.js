@@ -9,6 +9,7 @@ import EmptyIndicator from '../layout/EmptyIndicator';
 import CadeadoItem from './CadeadoItem';
 import LiberadorList from '../liberador/LiberadorList';
 import EventoList from '../evento/EventoList';
+import RegisterLiberador from '../liberador/RegisterLiberador';
 
 const Cadeado = ({
   id,
@@ -49,6 +50,7 @@ const Cadeado = ({
         <Tab label="Eventos" />
       </Tabs>
       <TabPage value={0} tab={tab}>
+        <RegisterLiberador />
         <LiberadorList liberadores={cadeado ? cadeado.liberadores : []} />
       </TabPage>
       <TabPage value={1} tab={tab}>

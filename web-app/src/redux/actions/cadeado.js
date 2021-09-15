@@ -152,7 +152,6 @@ export const updateCadeado = (cadeado) => async (dispatch, getState) => {
 };
 
 export const registerLiberador = (liberador) => async (dispatch, getState) => {
-  if (!liberador.id_cadeado) return;
   dispatch({ type: ON_CADEADOS_LOADING, payload: null });
   try {
     const url = Url.registerLiberadorUrl();
@@ -163,7 +162,10 @@ export const registerLiberador = (liberador) => async (dispatch, getState) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(liberador),
+        body: JSON.stringify({
+          ...liberador,
+          id_cadeado: getState().cadeado.selected.id,
+        }),
       },
       dispatch,
       getState

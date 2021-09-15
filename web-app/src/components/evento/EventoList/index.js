@@ -5,7 +5,6 @@ import { Box } from '@material-ui/core';
 import EventoListItem from './EventoListItem';
 
 const EventoList = ({ eventos, ...props }) => {
-  console.log(eventos);
   if (!eventos || eventos.length <= 0)
     return <EmptyIndicator label="Sem eventos" />;
   return (

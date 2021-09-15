@@ -6,6 +6,7 @@ import { getCadeados, clearCadeados } from '../../redux/actions/cadeado';
 import LoadingIndicator from '../layout/LoadingIndicator';
 import ErrorIndicator from '../layout/ErrorIndicator';
 import CadeadoList from './CadeadoList';
+import RegisterCadeado from './RegisterCadeado';
 const Cadeados = ({
   cadeados,
   loading,
@@ -25,11 +26,12 @@ const Cadeados = ({
   return (
     <Fragment>
       <LoadingIndicator
-        loading={loading}
+        loading={loading && cadeados === null}
         label="Carregando cadeados..."
         {...props}
       />
       <ErrorIndicator error={error} {...props} />
+      <RegisterCadeado />
       <CadeadoList cadeados={cadeados ? cadeados : []} />
     </Fragment>
   );

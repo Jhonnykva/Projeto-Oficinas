@@ -56,12 +56,7 @@ const LiberadorListItem = ({ id, alias, ativo, loading, updateLiberador }) => {
           valueProps={valueProps}
         />
       </Box>
-
-      <Switch
-        checked={ativo}
-        defaultChecked={ativo}
-        onClick={handleOnSwitchClick}
-      ></Switch>
+      <Switch checked={ativo} onClick={handleOnSwitchClick}></Switch>
     </Box>
   );
 };

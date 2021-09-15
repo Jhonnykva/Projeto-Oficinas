@@ -64,7 +64,11 @@ const CadeadoListItem = ({
       </Box>
 
       <Button onClick={handleCadeadoLock}>
-        {String(estado).toLowerCase() === 'bloqueado' ? <LockOpen /> : <Lock />}
+        {String(estado).toLowerCase() === 'desbloqueado' ? (
+          <LockOpen />
+        ) : (
+          <Lock />
+        )}
       </Button>
       <Button component={Link} to={Url.getDashboardCadeadoUrl(id)}>
         <Info />

@@ -93,8 +93,6 @@ const authReducer = (state = initialState, action) => {
         error: initialState.error,
       };
     case ON_UPDATE_LIBERADOR:
-      console.log(state);
-      console.log(state.selected.liberadores);
       return {
         ...state,
         loading: false,
