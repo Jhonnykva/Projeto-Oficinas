@@ -8,7 +8,7 @@ const CadeadosDashItem = ({ ...props }) => {
   const style = getDashboardItemStyle(theme);
 
   return (
-    <div {...props}>
+    <div className={style.menuContainer} {...props}>
       <Typography variant="h4">Cadeados</Typography>
       <Divider />
       <Cadeados />

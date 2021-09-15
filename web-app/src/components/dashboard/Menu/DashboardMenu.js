@@ -22,7 +22,7 @@ import Url from '../../../utils/Url';
 import LoginWatcher from '../../login/LoginWatcher';
 import { logout } from '../../../redux/actions/auth';
 import { useHistory } from 'react-router-dom';
-import { LockOpen } from '@material-ui/icons';
+import { Lock } from '@material-ui/icons';
 const drawerWidth = 240;
 
 const useStyles = makeStyles((theme) =>
@@ -100,8 +100,8 @@ const menuItems = [
   },
   {
     key: 'cadeado',
-    text: 'Inicio',
-    icon: <LockOpen />,
+    text: 'Cadeados',
+    icon: <Lock />,
     link: Url.getDashboardCadeadosUrl(),
   },
 ];

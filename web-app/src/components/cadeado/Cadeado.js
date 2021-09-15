@@ -30,7 +30,7 @@ const Cadeado = ({
   useEffect(() => {
     getCadeado(id);
     return () => clearCadeado();
-  }, [id]);
+  }, [id, getCadeado, clearCadeado]);
 
   return (
     <Box {...props}>

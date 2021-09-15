@@ -4,13 +4,17 @@ import EmptyIndicator from '../../layout/EmptyIndicator';
 import { Box } from '@material-ui/core';
 import EventoListItem from './EventoListItem';
 
-const EventoList = ({ eventos, ...props }) => {
+const EventoList = ({ eventos, showCadeadoLink, ...props }) => {
   if (!eventos || eventos.length <= 0)
     return <EmptyIndicator label="Sem eventos" />;
   return (
     <Box display="flex" flexDirection="column" {...props}>
       {eventos.map((evento) => (
-        <EventoListItem key={evento.id} {...evento} />
+        <EventoListItem
+          key={evento.id}
+          {...evento}
+          showCadeadoLink={showCadeadoLink}
+        />
       ))}
     </Box>
   );
@@ -18,6 +22,11 @@ const EventoList = ({ eventos, ...props }) => {
 
 EventoList.propTypes = {
   eventos: PropTypes.array.isRequired,
+  showCadeadoLink: PropTypes.bool.isRequired,
+};
+
+EventoList.defaultProps = {
+  showCadeadoLink: false,
 };
 
 export default EventoList;
