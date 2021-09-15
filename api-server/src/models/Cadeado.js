@@ -55,8 +55,8 @@ CadeadoSchema.virtual('eventos', {
 
 // Gera public & private ky
 CadeadoSchema.statics.getNewKeys = () => {
-  const public_key = crypto.randomBytes(8).toString('hex');
-  const private_key = crypto.randomBytes(8).toString('hex');
+  const public_key = crypto.randomBytes(4).toString('hex');
+  const private_key = crypto.randomBytes(4).toString('hex');
   return { public_key, private_key };
 };
 

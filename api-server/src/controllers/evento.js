@@ -58,13 +58,13 @@ exports.registerEventoPredeterminado = asyncHandler(async (req, res, next) => {
   let evento = null;
   switch (idTipoEvento) {
     // Giroscopio detectou movimento não esperado
-    case 100:
+    case '100':
       evento = await Evento.create({
         id_usuario: cadeado.id_usuario,
         id_cadeado: req.cadeado.id,
         titulo: 'Movimento inesperado detectado',
         info: `O cadeado ${req.cadeado.id} detectou movimentos inesperados. Possível manipulação não autorizada.`,
-        tipo: 'error',
+        tipo: 'critical',
       });
       break;
     default:

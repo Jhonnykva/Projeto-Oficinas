@@ -13,6 +13,6 @@ router.route('/').get(userAuth, getEventos).post(userAuth, registerEvento);
 
 router
   .route('/p/:id_tipo_evento')
-  .get(cadeadoAuth, registerEventoPredeterminado);
+  .post(cadeadoAuth, registerEventoPredeterminado);
 
 module.exports = router;

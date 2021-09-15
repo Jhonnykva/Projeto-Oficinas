@@ -24,13 +24,11 @@ module.exports = asyncHandler(async (req, res, next) => {
   if (private_key === null || public_key === null) {
     return next(new ErrorResponse('Não autorizado', 401));
   }
-  console.log(private_key, public_key);
   try {
     req.cadeado = await Cadeado.findOne({
       private_key,
       public_key,
     });
-    console.log(req.cadeado);
     if (!req.cadeado) return next(new ErrorResponse('Não autorizado', 401));
     return next();
   } catch (err) {

@@ -1,7 +1,9 @@
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/asyncHandler');
 const Cadeado = require('../models/Cadeado');
+const Evento = require('../models/Evento');
 const mongoose = require('mongoose');
+const Liberador = require('../models/Liberador');
 
 // @description   Retorna todos os cadeados associados ao usuario
 // @route         GET /cadeado
@@ -9,7 +11,7 @@ const mongoose = require('mongoose');
 exports.getCadeados = asyncHandler(async (req, res, next) => {
   const cadeado = await Cadeado.find({
     id_usuario: new mongoose.Types.ObjectId(req.user.id),
-  });
+  }).sort('-createdAt');
 
   res.status(200).json({ data: cadeado });
 });
@@ -38,8 +40,8 @@ exports.getCadeado = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('ID inválido', 400));
 
   let cadeado = await Cadeado.findById(id)
-    .populate('liberadores')
-    .populate('eventos');
+    .populate({ path: 'liberadores', options: { sort: '-createdAt' } })
+    .populate({ path: 'eventos', options: { sort: '-createdAt' } });
 
   if (!cadeado)
     return next(new ErrorResponse(`Cadeado ${id} não encontrado`, 404));
@@ -67,6 +69,7 @@ exports.updateCadeado = asyncHandler(async (req, res, next) => {
   if (String(cadeado.id_usuario) !== String(req.user.id))
     return next(new ErrorResponse(`Não autorizado`, 403));
 
+  handleUpdateCadeadoEvents(cadeado, req.body, req.user);
   cadeado = await Cadeado.findByIdAndUpdate(id, req.body, {
     new: true,
     runValidators: true,
@@ -93,3 +96,84 @@ exports.isDesbloqueado = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({ estado: cadeado.estado });
 });
+
+// @description   Desbloqueia o cadeado caso seja fornecido um liberador válido
+// @route         POST /cadeado/me/desbloquear?cod_liberador=
+// @access        Privada
+exports.desbloquearCadeado = asyncHandler(async (req, res, next) => {
+  const id = req.cadeado ? req.cadeado.id : null;
+  if (typeof id !== 'string')
+    return next(new ErrorResponse('ID inválido', 400));
+
+  let cadeado = await Cadeado.findById(id);
+
+  if (!cadeado)
+    return next(new ErrorResponse(`Cadeado ${id} não encontrado`, 404));
+
+  if (typeof req.query.cod_liberador === 'string') {
+    const cod_liberador = req.query.cod_liberador;
+    const liberador = await Liberador.findOne({
+      cod_liberador,
+      id_cadeado: new mongoose.Types.ObjectId(id),
+    });
+    if (liberador && liberador.ativo) {
+      // Liberador válido
+      cadeado = await Cadeado.findByIdAndUpdate(
+        id,
+        { estado: 'Desbloqueado' },
+        {
+          new: true,
+          runValidators: true,
+        }
+      );
+      await Evento.create({
+        titulo: `Cadeado Desbloqueado | Liberado por código QR`,
+        info: `O cadeado ${req.cadeado.nome} foi Desbloqueado pelo liberador ${liberador.alias} (${liberador.id})`,
+        id_cadeado: id,
+        id_usuario: req.cadeado.id_usuario,
+      });
+      res.status(200).json({});
+    } else {
+      // Liberador inválido
+      let info = `O cadeado ${req.cadeado.nome}`;
+      if (liberador)
+        info =
+          info +
+          ` pelo liberador <${liberador.alias}> desativado. (${liberador.id})`;
+      else info = info + ` por um liberador inválido.`;
+
+      await Evento.create({
+        titulo: `Uso de liberador inválido`,
+        info,
+        id_cadeado: id,
+        id_usuario: req.cadeado.id_usuario,
+        tipo: 'warn',
+      });
+    }
+  }
+
+  return next(new ErrorResponse('Liberador inválido', 400));
+  //res.status(400).json({ estado: cadeado.estado });
+});
+
+const handleUpdateCadeadoEvents = async (original, updatedFields, user) => {
+  if (!original.id) return;
+  try {
+    if (
+      typeof updatedFields.estado !== 'undefined' &&
+      original.estado !== updatedFields.estado
+    ) {
+      const { estado } = updatedFields;
+      const { id_usuario, id } = original;
+      const { alias } = user;
+      await Evento.create({
+        titulo: `Cadeado ${estado} | App Web`,
+        info: `O cadeado foi <${estado}> pelo usuario "${alias}".`,
+        id_cadeado: id,
+        id_usuario,
+      });
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};

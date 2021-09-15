@@ -15,7 +15,7 @@ exports.getLiberadores = asyncHandler(async (req, res, next) => {
   const cadeado = await Liberador.find({
     id_usuario: new mongoose.Types.ObjectId(req.user.id),
     id_cadeado: new mongoose.Types.ObjectId(id_cadeado),
-  });
+  }).sort('-createdAt');
 
   res.status(200).json({ data: cadeado });
 });
