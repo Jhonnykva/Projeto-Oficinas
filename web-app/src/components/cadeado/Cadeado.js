@@ -10,6 +10,7 @@ import CadeadoItem from './CadeadoItem';
 import LiberadorList from '../liberador/LiberadorList';
 import EventoList from '../evento/EventoList';
 import RegisterLiberador from '../liberador/RegisterLiberador';
+import CadeadoConfigQr from './CadeadoConfigQr';
 
 const Cadeado = ({
   id,
@@ -48,6 +49,7 @@ const Cadeado = ({
       <Tabs value={tab} onChange={handleTabChange}>
         <Tab label="Liberadores" />
         <Tab label="Eventos" />
+        <Tab label="Configuração" />
       </Tabs>
       <TabPage value={0} tab={tab}>
         <RegisterLiberador />
@@ -55,6 +57,9 @@ const Cadeado = ({
       </TabPage>
       <TabPage value={1} tab={tab}>
         <EventoList eventos={cadeado ? cadeado.eventos : []} />
+      </TabPage>
+      <TabPage value={2} tab={tab}>
+        <CadeadoConfigQr />
       </TabPage>
     </Box>
   );

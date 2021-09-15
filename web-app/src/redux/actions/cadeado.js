@@ -210,3 +210,30 @@ export const updateLiberador = (liberador) => async (dispatch, getState) => {
     dispatch({ type: ON_CADEADO_ERROR, payload: err.message });
   }
 };
+
+export const getCadeadoConfigQrCode = (info) => async (dispatch, getState) => {
+  try {
+    const url = Url.getCadeadoConfigQrUrl(getState().cadeado.selected.id);
+    const res = await rfetch(
+      url,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(info),
+      },
+      dispatch,
+      getState
+    );
+    const json = await res.json();
+    if (res.status === 200) {
+      return { success: true, data: json.data };
+    } else {
+      return { success: false, error: json.error };
+    }
+  } catch (err) {
+    console.error(err);
+  }
+  return { success: false, error: 'Erro inesperado' };
+};

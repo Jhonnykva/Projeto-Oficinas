@@ -29,6 +29,10 @@ const updateCadeadoUrl = (id, host = defaultServerHost) => {
   return `${host}/cadeado/${id}`;
 };
 
+const getCadeadoConfigQrUrl = (id, host = defaultServerHost) => {
+  return `${host}/cadeado/${id}/config_qr`;
+};
+
 const registerLiberadorUrl = (host = defaultServerHost) => {
   return `${host}/liberador`;
 };
@@ -66,6 +70,7 @@ module.exports = {
   updateCadeadoUrl,
   registerLiberadorUrl,
   getCadeadoByIdUrl,
+  getCadeadoConfigQrUrl,
   getLiberadorCadeadoQrCodeUrl,
   updateLiberadorUrl,
   getLoginPageUrl,

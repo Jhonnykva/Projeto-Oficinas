@@ -4,6 +4,7 @@ const Cadeado = require('../models/Cadeado');
 const Evento = require('../models/Evento');
 const mongoose = require('mongoose');
 const Liberador = require('../models/Liberador');
+const QrCode = require('qrcode');
 
 // @description   Retorna todos os cadeados associados ao usuario
 // @route         GET /cadeado
@@ -177,3 +178,29 @@ const handleUpdateCadeadoEvents = async (original, updatedFields, user) => {
     console.error(err);
   }
 };
+
+// @description   Obtem código QR para configurar cadeado
+// @route         POST /cadeado/:id_cadeado/config_qr
+// @access        Privada
+exports.getcadeadoConfigQR = asyncHandler(async (req, res, next) => {
+  const id = req.params.id_cadeado;
+  if (typeof id !== 'string')
+    return next(new ErrorResponse('ID inválido', 400));
+
+  let cadeado = await Cadeado.findById(id);
+
+  if (!cadeado)
+    return next(new ErrorResponse(`Cadeado ${id} não encontrado`, 404));
+
+  if (String(cadeado.id_usuario) !== String(req.user.id))
+    return next(new ErrorResponse(`Não autorizado`, 403));
+
+  const token = Buffer.from(
+    `${cadeado.public_key}:${cadeado.private_key}`
+  ).toString('base64');
+
+  const qr = await QrCode.toDataURL(
+    `Basic ${token};${req.body.ssid};${req.body.pass}`
+  );
+  res.status(200).json({ data: qr });
+});
