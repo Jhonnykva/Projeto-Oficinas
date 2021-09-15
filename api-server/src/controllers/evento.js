@@ -4,6 +4,7 @@ const Cadeado = require('../models/Cadeado');
 const Evento = require('../models/Evento');
 const mongoose = require('mongoose');
 const QrCode = require('qrcode');
+const { query } = require('express');
 
 // @description   Retorna todos os eventos do cadeado
 // @route         GET /evento?id_cadeado=
@@ -11,15 +12,18 @@ const QrCode = require('qrcode');
 exports.getEventos = asyncHandler(async (req, res, next) => {
   const id_cadeado = req.params.id_cadeado || req.query.id_cadeado;
 
-  if (typeof id_cadeado !== 'string')
-    return next(new ErrorResponse('Cadeado inválido', 400));
+  if (!req.user || typeof req.user.id !== 'string')
+    return next(new ErrorResponse('Não autorizado', 401));
 
-  const cadeado = await Evento.find({
+  const query = {
     id_usuario: new mongoose.Types.ObjectId(req.user.id),
-    id_cadeado: new mongoose.Types.ObjectId(id_cadeado),
-  });
+  };
 
-  res.status(200).json({ data: cadeado });
+  if (id_cadeado) query.id_cadeado = new mongoose.Types.ObjectId(id_cadeado);
+
+  const eventos = await Evento.find(query).sort('-createdAt');
+
+  res.status(200).json({ data: eventos });
 });
 
 // @description   Registra evento

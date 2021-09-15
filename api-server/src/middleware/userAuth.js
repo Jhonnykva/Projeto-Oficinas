@@ -20,6 +20,9 @@ module.exports = asyncHandler(async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = await Usuario.findById(decoded.id);
+    if (!req.user) {
+      return next(new ErrorResponse('Não autorizado', 401));
+    }
     return next();
   } catch (err) {
     console.error(err);
