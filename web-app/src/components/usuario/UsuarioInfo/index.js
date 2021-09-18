@@ -11,7 +11,7 @@ const UsuarioInfo = ({ token, ...props }) => {
   const [available, setAvailable] = useState(true);
 
   const updateUsuario = async () => {
-    const usr = null; //await getUsuario(token);
+    const usr = await getUsuario(token);
     if (usr !== usuario) {
       if (available) setUsuario(usr);
     }
@@ -32,14 +32,22 @@ const UsuarioInfo = ({ token, ...props }) => {
 
   if (!usuario || usuario === null) return <Fragment />;
   return (
-    <Box {...props} display="flex" padding="1rem">
-      <AccountCircleRounded />
-      <Typography style={{ marginLeft: '0.5rem', color: '#555' }}>
-        {String(usuario.id.toUpperCase()).padStart(5, '0')}
-      </Typography>
-      <Typography style={{ marginLeft: '0.25rem' }}>
-        {usuario.alias.toUpperCase()}
-      </Typography>
+    <Box
+      {...props}
+      display="flex"
+      padding="0.5rem"
+      alignItems="center"
+      justifyContent="starts"
+    >
+      <AccountCircleRounded fontSize="large" />
+      <Box display="flex" flexDirection="column" marginLeft="1rem">
+        <Typography>
+          {`${usuario.nome} ${
+            usuario.sobrenome
+          } | (${usuario.alias.toLowerCase()})`}
+        </Typography>
+        <Typography style={{ color: '#555' }}>{usuario.email}</Typography>
+      </Box>
     </Box>
   );
 };
@@ -62,7 +70,7 @@ const getUsuario = async (token) => {
     const url = Url.getUsuarioInfoUrl();
     const res = await sfetch(url, { token });
     const json = await res.json();
-    if (json.success) {
+    if (res.ok) {
       return json.data;
     } else {
       return null;

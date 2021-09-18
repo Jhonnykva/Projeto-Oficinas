@@ -2,7 +2,7 @@ import React from 'react';
 import CadeadosDashItem from '../../dashboard/Item/CadeadosDashItem';
 import DashboardMenu from '../../dashboard/Menu/DashboardMenu';
 
-const CadeadosPage = ({ ...props }) => {
+const CadeadosPage = ({ staticContext, ...props }) => {
   return (
     <main>
       <DashboardMenu>

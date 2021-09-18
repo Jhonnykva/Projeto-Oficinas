@@ -34,6 +34,15 @@ exports.login = asyncHandler(async (req, res, next) => {
   res.status(200).json({ token });
 });
 
+// @description   Retorna informação do usuario
+// @route         POST /usuario/me
+// @access        Publico
+exports.getMe = asyncHandler(async (req, res, next) => {
+  const user = await Usuario.findById(req.user.id).select('-pass');
+
+  res.status(200).json({ data: user });
+});
+
 // @description   Cadastra usuario
 // @route         POST /usuario
 // @access        Privada

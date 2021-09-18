@@ -5,7 +5,7 @@ import Login from '../login/Login';
 import getLoginStyle from '../../styles/getLoginStyle';
 import { useHistory } from 'react-router-dom';
 
-const LoginPage = ({ ...props }) => {
+const LoginPage = ({ staticContext, ...props }) => {
   const theme = useTheme();
   const style = getLoginStyle(theme);
   const history = useHistory();
@@ -13,7 +13,7 @@ const LoginPage = ({ ...props }) => {
     history.replace(Url.getDashboardHomeUrl());
   };
   return (
-    <main className={style.loginPage}>
+    <main className={style.loginPage} {...props}>
       <Login onSuccessLogin={onSuccessLogin} />
     </main>
   );

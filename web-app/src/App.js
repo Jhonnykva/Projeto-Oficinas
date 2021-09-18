@@ -27,7 +27,6 @@ function App() {
           <CssBaseline />
           <Router>
             <Switch>
-              {/* <Route exact path="/" component={<Redirect />} /> */}
               <Route exact path={Url.getLoginPageUrl()} component={LoginPage} />
               <Route
                 exact
@@ -43,6 +42,9 @@ function App() {
                 path={Url.getDashboardHomeUrl()}
                 component={HomePage}
               />
+              <Route>
+                <Redirect to={'/login'} />
+              </Route>
             </Switch>
           </Router>
         </ThemeProvider>

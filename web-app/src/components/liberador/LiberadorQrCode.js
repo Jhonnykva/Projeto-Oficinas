@@ -22,7 +22,7 @@ const LiberadorQrCode = ({ id, getLiberadorCadeadoQrCode, ...props }) => {
   }, []);
 
   if (src === null) return <BrokenImage {...props} />;
-  return <img src={src} {...props} />;
+  return <img src={src} alt="" {...props} />;
 };
 
 LiberadorQrCode.propTypes = {

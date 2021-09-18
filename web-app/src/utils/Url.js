@@ -45,6 +45,10 @@ const updateLiberadorUrl = (id, host = defaultServerHost) => {
   return `${host}/liberador/${id}`;
 };
 
+const getEventosUrl = (host = defaultServerHost) => {
+  return `${host}/evento`;
+};
+
 // Front-end
 const getLoginPageUrl = (appBase = defaultAppBase) => {
   return `${appBase}/login`;
@@ -73,6 +77,7 @@ module.exports = {
   getCadeadoConfigQrUrl,
   getLiberadorCadeadoQrCodeUrl,
   updateLiberadorUrl,
+  getEventosUrl,
   getLoginPageUrl,
   getDashboardHomeUrl,
   getDashboardCadeadosUrl,

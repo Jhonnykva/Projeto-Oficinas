@@ -1,6 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { Box, Typography, Divider, useTheme } from '@material-ui/core';
+import { Box, Typography, useTheme } from '@material-ui/core';
 import getCadeadoStyle from '../../styles/getCadeadoStyle';
 
 const CadeadoItem = ({ nome, associado, estado }) => {

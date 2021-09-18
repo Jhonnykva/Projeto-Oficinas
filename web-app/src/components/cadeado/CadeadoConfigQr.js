@@ -4,7 +4,7 @@ import { connect } from 'react-redux';
 
 import { getCadeadoConfigQrCode } from '../../redux/actions/cadeado';
 
-import { Box, TextField, Button, Divider } from '@material-ui/core';
+import { Box, TextField, Button } from '@material-ui/core';
 
 const CadeadoConfigQr = ({ loading, getCadeadoConfigQrCode }) => {
   const [imgSrc, setImgSrc] = useState(null);
@@ -67,7 +67,7 @@ CadeadoConfigQr.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   ...ownProps,
-  loading: state.loading,
+  loading: state.cadeado.loading,
 });
 
 export default connect(mapStateToProps, { getCadeadoConfigQrCode })(
