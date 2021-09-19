@@ -3,8 +3,9 @@ const asyncHandler = require('../middleware/asyncHandler');
 const Cadeado = require('../models/Cadeado');
 const Evento = require('../models/Evento');
 const mongoose = require('mongoose');
+const jimp = require('jimp');
 const Liberador = require('../models/Liberador');
-const QrCode = require('qrcode');
+const QrCode = require('qrcode-reader');
 
 // @description   Retorna todos os cadeados associados ao usuario
 // @route         GET /cadeado
@@ -203,4 +204,79 @@ exports.getcadeadoConfigQR = asyncHandler(async (req, res, next) => {
     `Basic ${token};${req.body.ssid};${req.body.pass}`
   );
   res.status(200).json({ data: qr });
+});
+
+// @description   Recebe imagem e verifica se existe um liberador
+// @route         POST /cadeado/me/liberar
+// @access        Privada
+exports.checkQrCode = asyncHandler(async (req, res, next) => {
+  const id = req.cadeado.id;
+  console.log(id);
+  if (!id) return next(new ErrorResponse('Não autorizado', 401));
+
+  var qrI = new QrCode();
+  const filePath = `./public/qr-codes/file-${Date.now()}.jpg`;
+
+  if (!req.files.imageFile)
+    return next(new ErrorResponse('Código inválido', 400));
+
+  await req.files.imageFile.mv(filePath);
+  const img = await jimp.read(filePath);
+  qrI.callback = async function (err, value) {
+    try {
+      if (err) {
+        console.error(err);
+        // TODO handle error
+        return next(new ErrorResponse('Código inválido', 400));
+      }
+      console.log(value.result);
+      console.log(value);
+      const cod_liberador = value.result;
+      const liberador = await Liberador.findOne({
+        cod_liberador,
+        id_cadeado: new mongoose.Types.ObjectId(id),
+      });
+      if (liberador && liberador.ativo) {
+        // Liberador válido
+        cadeado = await Cadeado.findByIdAndUpdate(
+          id,
+          { estado: 'Desbloqueado' },
+          {
+            new: true,
+            runValidators: true,
+          }
+        );
+        await Evento.create({
+          titulo: `Cadeado Desbloqueado | Liberado por código QR`,
+          info: `O cadeado ${req.cadeado.nome} foi Desbloqueado pelo liberador ${liberador.alias} (${liberador.id})`,
+          id_cadeado: id,
+          id_usuario: req.cadeado.id_usuario,
+        });
+        return res.status(200).json({});
+      } else {
+        // Liberador inválido
+        let info = `O cadeado ${req.cadeado.nome}`;
+        if (liberador)
+          info =
+            info +
+            ` pelo liberador <${liberador.alias}> desativado. (${liberador.id})`;
+        else info = info + ` por um liberador inválido.`;
+
+        await Evento.create({
+          titulo: `Uso de liberador inválido`,
+          info,
+          id_cadeado: id,
+          id_usuario: req.cadeado.id_usuario,
+          tipo: 'warn',
+        });
+      }
+      return next(new ErrorResponse('Código inválido', 400));
+    } catch (err) {
+      console.error(err);
+      return next(new ErrorResponse('Código inválido', 400));
+    }
+  };
+  await qrI.decode(img.bitmap);
+
+  //res.status(200).json({ data: '' });
 });
