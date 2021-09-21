@@ -5,7 +5,8 @@ const Evento = require('../models/Evento');
 const mongoose = require('mongoose');
 const jimp = require('jimp');
 const Liberador = require('../models/Liberador');
-const QrCode = require('qrcode-reader');
+const QrCodeReader = require('qrcode-reader');
+const QrCode = require('qrcode');
 
 // @description   Retorna todos os cadeados associados ao usuario
 // @route         GET /cadeado
@@ -214,7 +215,7 @@ exports.checkQrCode = asyncHandler(async (req, res, next) => {
   console.log(id);
   if (!id) return next(new ErrorResponse('Não autorizado', 401));
 
-  var qrI = new QrCode();
+  var qrI = new QrCodeReader();
   const filePath = `./public/qr-codes/file-${Date.now()}.jpg`;
 
   if (!req.files.imageFile)

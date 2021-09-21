@@ -1,6 +1,8 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
+import { Link } from 'react-router-dom';
+import Url from '../../../utils/Url';
 
 import { updateLiberador } from '../../../redux/actions/cadeado';
 
@@ -26,10 +28,12 @@ const LiberadorListItem = ({ id, alias, ativo, loading, updateLiberador }) => {
       alignItems="center"
       className={style.cadeadoListItemContainer}
     >
-      <LiberadorQrCode
-        id={id}
-        style={{ height: '5rem', width: '5rem', margin: 'auto auto' }}
-      />
+      <Link to={Url.getLiberadorPageUrl(id, alias)}>
+        <LiberadorQrCode
+          id={id}
+          style={{ height: '5rem', width: '5rem', margin: 'auto auto' }}
+        />
+      </Link>
       <Box
         display="flex"
         flexDirection="column"

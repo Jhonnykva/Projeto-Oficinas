@@ -9,6 +9,7 @@ import {
 import CadeadosPage from './components/pages/Dashboard/CadeadosPage';
 import CadeadoPage from './components/pages/Dashboard/CadeadoPage';
 import HomePage from './components/pages/Dashboard/HomePage';
+import LiberadorPage from './components/pages/LiberadorPage';
 import LoginPage from './components/pages/LoginPage';
 import Url from './utils/Url';
 
@@ -41,6 +42,10 @@ function App() {
                 exact
                 path={Url.getDashboardHomeUrl()}
                 component={HomePage}
+              />
+              <Route
+                path={Url.getLiberadorPageUrl(':id_liberador', ':alias')}
+                component={LiberadorPage}
               />
               <Route>
                 <Redirect to={'/login'} />

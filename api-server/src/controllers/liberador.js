@@ -3,6 +3,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const Liberador = require('../models/Liberador');
 const mongoose = require('mongoose');
 const QrCode = require('qrcode');
+
 // @description   Retorna todos os liberadores do cadeado
 // @route         GET /cadeado/liberador?id_cadeado=
 // @access        Privada
@@ -93,7 +94,10 @@ exports.getLiberadorQR = asyncHandler(async (req, res, next) => {
   if (String(liberador.id_usuario) !== String(req.user.id))
     return next(new ErrorResponse(`Não autorizado`, 403));
 
-  const qr = await QrCode.toDataURL(liberador.cod_liberador);
+  const qr = await QrCode.toDataURL(liberador.cod_liberador, {
+    errorCorrectionLevel: 'H',
+    width: 250,
+  });
   res.status(200).json({ data: qr });
 });
 

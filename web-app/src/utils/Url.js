@@ -66,6 +66,10 @@ const getDashboardCadeadoUrl = (id, appBase = defaultAppBase) => {
   return `${appBase}/dashboard/cadeado/${id}`;
 };
 
+const getLiberadorPageUrl = (id, alias, appBase = defaultAppBase) => {
+  return `${appBase}/liberador/${id}/${alias}`;
+};
+
 module.exports = {
   getUsuarioInfoUrl,
   getLoginUrl,
@@ -82,4 +86,5 @@ module.exports = {
   getDashboardHomeUrl,
   getDashboardCadeadosUrl,
   getDashboardCadeadoUrl,
+  getLiberadorPageUrl
 };
