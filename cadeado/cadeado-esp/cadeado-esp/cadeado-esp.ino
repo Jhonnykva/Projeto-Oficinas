@@ -36,10 +36,13 @@
 //Servo servo;
 const int pinServo = 4;
 
-// Controle Gyroscopio
+// Controle Giroscópio
 const int MPU_ADDRESS = 0x68; // MPU6050 I2C address
 TwoWire I2CMPU = TwoWire(0);
 Adafruit_MPU6050 mpu;
+int contagemNotificacaoMPU=0;
+sensors_event_t a, g, temp;
+
 
 // Parametros servidor
 String host = "10.255.0.219";
@@ -79,6 +82,8 @@ void setup()
 
 void loop()
 {
+  // Execução do giroscópio
+  executarMPU();
   /* Pega a imagem da camera e envia para o servidor
       para verificar se existe um liberador na imagem
   */
@@ -155,9 +160,9 @@ int verificaMPU()
   return 0;
 }
 /**
-* @Desc: Captura uma imagem e envia para o servidor para verificar se um liberador válido 
-* existe na imagem.
-* @Retorno: True -> Liberador válido | False -> Liberador inválido ou não existente
+  @Desc: Captura uma imagem e envia para o servidor para verificar se um liberador válido
+  existe na imagem.
+  @Retorno: True -> Liberador válido | False -> Liberador inválido ou não existente
 **/
 bool verificarLiberador()
 {
@@ -296,11 +301,164 @@ void iniciaCamera() {
     ESP.restart();
   }
 }
-void envioAPI()
-{
 
-  lerQRcode();
-  verificaMPU();
-  //enviar dados ca camera para a API
-  //...
+
+void executarMPU(){
+
+  int statusMovimento=0;
+  //Movimentação
+  if(cadeadoMovendo() && statusMovimento==0){
+    //Notifica o sistema que o cadeado começou a se mover
+    statusMovimento=1;
+    enviarEventoCadeadoMovendo();
+  }
+  if(!cadeadoMovendo() && statusMovimento==1){
+    //Notifica o sistema que o cadeado parou de se mover
+    statusMovimento=0;
+    enviarEventoCadeadoParado();
+  }
+  if(cadeadoMovendo() && statusMovimento==1){
+    //Notifica o sistema a cada um certo tempo que o cadeado ainda não parou de se mover
+    contagemNotificacaoMPU++;
+    if(contagemNotificacaoMPU>=10){
+      enviarEventoCadeadoContinuaMovimento();
+      contagemNotificacaoMPU=0;
+    }
+  }
+
+  //Giro
+  if(cadeadoGirando()){
+    if(!verificaLiberador()){
+      //notifica o sistema que alguém está mechendo no cadeado sem permissão
+      enviarEventoCadeadoViolado();
+      
+    }
+  }  
+}
+
+
+bool enviarEventoCadeadoMovendo() {
+  //Mensagem na API: "O cadeado começou a se mover!"
+  HTTPClient http;
+  int COD_EVENTO = 401; // Código do evento registrado
+  String serverPath = "http://" + host + ":" + API_PORT + "/api/v1/evento/p/" + COD_EVENTO;
+
+  http.begin(serverPath.c_str());
+  http.addHeader("Authorization", "Basic " + authString);
+  int httpResponseCode = http.POST();
+  http.end();
+
+#if DEBUG
+  if (httpResponseCode > 0) {
+    Serial.print("HTTP Response code: ");
+    Serial.println(httpResponseCode);
+  } else {
+    Serial.print("Error code: ");
+    Serial.println(httpResponseCode);
+  }
+#endif
+}
+
+bool enviarEventoCadeadoParado() {
+  //Mensagem na API: "O cadeado parou de se mover!"
+  HTTPClient http;
+  int COD_EVENTO = 402; // Código do evento registrado
+  String serverPath = "http://" + host + ":" + API_PORT + "/api/v1/evento/p/" + COD_EVENTO;
+
+  http.begin(serverPath.c_str());
+  http.addHeader("Authorization", "Basic " + authString);
+  int httpResponseCode = http.POST();
+  http.end();
+
+#if DEBUG
+  if (httpResponseCode > 0) {
+    Serial.print("HTTP Response code: ");
+    Serial.println(httpResponseCode);
+  } else {
+    Serial.print("Error code: ");
+    Serial.println(httpResponseCode);
+  }
+#endif
+}
+
+bool enviarEventoCadeadoContinuaMovimento() {
+  //Mensagem na API: "O cadeado continua a se mover!"
+  HTTPClient http;
+  int COD_EVENTO = 403; // Código do evento registrado
+  String serverPath = "http://" + host + ":" + API_PORT + "/api/v1/evento/p/" + COD_EVENTO;
+
+  http.begin(serverPath.c_str());
+  http.addHeader("Authorization", "Basic " + authString);
+  int httpResponseCode = http.POST();
+  http.end();
+
+#if DEBUG
+  if (httpResponseCode > 0) {
+    Serial.print("HTTP Response code: ");
+    Serial.println(httpResponseCode);
+  } else {
+    Serial.print("Error code: ");
+    Serial.println(httpResponseCode);
+  }
+#endif
+}
+
+bool enviarEventoCadeadoViolado() {
+  //Mensagem na API: "Alguém sem autorização está mechendo no cadeado!"
+  HTTPClient http;
+  int COD_EVENTO = 404; // Código do evento registrado
+  String serverPath = "http://" + host + ":" + API_PORT + "/api/v1/evento/p/" + COD_EVENTO;
+
+  http.begin(serverPath.c_str());
+  http.addHeader("Authorization", "Basic " + authString);
+  int httpResponseCode = http.POST();
+  http.end();
+
+#if DEBUG
+  if (httpResponseCode > 0) {
+    Serial.print("HTTP Response code: ");
+    Serial.println(httpResponseCode);
+  } else {
+    Serial.print("Error code: ");
+    Serial.println(httpResponseCode);
+  }
+#endif
+}
+
+bool cadeadoMovendo(){
+  
+  // A variável error é utilizada para evitar a deteção de flutuações
+  // Talvez seja necessário mudar o valor dela dependendo dos testes
+  float error = 0.05;
+
+  if(abs(a.acceleration.x)>error){
+    return true;
+  }
+  else if(abs(a.acceleration.y)>error){
+    return true;
+  }
+  else if(abs(a.acceleration.z)>error){
+    return true;
+  }
+
+  return false;  
+}
+
+bool cadeadoGirando(){
+  
+  // A variável error é utilizada para evitar a deteção de flutuações
+  // Talvez seja necessário mudar o valor dela dependendo dos testes
+  float error = 0.05;
+
+  if(abs(g.gyro.x)>error){
+    return true;
+  }
+  else if(abs(g.gyro.y)>error){
+    return true;
+  }
+  else if(abs(g.gyro.z)>error){
+    return true;
+  }
+
+  return false;  
 }
