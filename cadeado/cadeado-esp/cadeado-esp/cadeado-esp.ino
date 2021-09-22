@@ -1,11 +1,14 @@
 #include <WiFi.h>
 #include "Adafruit_MPU6050.h"
 #include <Wire.h>
-//#include <Servo.h>
 #include <HTTPClient.h>
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 #include "esp_camera.h"
+#include <EEPROM.h>
+
+#define EEPROM_LENGTH 512
+
 // Definições de pinos internos
 #define DEBUG 1
 #define PWDN_GPIO_NUM 32
@@ -40,18 +43,19 @@ const int pinServo = 4;
 const int MPU_ADDRESS = 0x68; // MPU6050 I2C address
 TwoWire I2CMPU = TwoWire(0);
 Adafruit_MPU6050 mpu;
-int contagemNotificacaoMPU=0;
+int contagemNotificacaoMPU = 0;
+float ax = -1, ay = -1, az = -1, gx = -1, gy = -1, gz = -1;
 sensors_event_t a, g, temp;
 
 
 // Parametros servidor
 String host = "10.255.0.219";
-String authString = "Basic NDZlODNlYzQ0MTQxMDdiYjozNDQ0NjczYjllZWVmMDA1";
+String authString = "ZjkwZjo2YTY0";
 WiFiClient client;
 
 // Parametros WiFi
-char *ssid = "--";
-char *pass = "--";
+String ssid = "--";
+String pass = "--";
 void setup()
 {
 
@@ -82,20 +86,34 @@ void setup()
 
 void loop()
 {
-  // Execução do giroscópio
-  executarMPU();
+
   /* Pega a imagem da camera e envia para o servidor
       para verificar se existe um liberador na imagem
   */
-  bool liberadorStatus = verificarLiberador();
+  bool desbloqueado = isCadeadoDesbloqueado();
 #if DEBUG
-  if (liberadorStatus) {
+  if (desbloqueado) {
     Serial.println("Cadeado Desbloqueado");
   } else {
-    Serial.println("Liberador inválido");
+    Serial.println("Cadeado bloqueado");
   }
 #endif
-  sleep(10);
+  if (!desbloqueado) {
+    bool liberadorStatus = verificarLiberador();
+    if (!liberadorStatus) {
+      // Verifica movimento caso o cadeado esteja bloqueado
+      executarMPU();
+    }
+#if DEBUG
+    if (liberadorStatus) {
+      Serial.println("Cadeado Desbloqueado");
+    } else {
+      Serial.println("Liberador inválido");
+    }
+#endif
+  }
+  delay(500);
+  //  sleep(10);
   //  envioAPI();
 
   // COMENTADO PARA TESTES
@@ -109,7 +127,7 @@ void setupWifi()
 {
 
   WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, pass);
+  WiFi.begin(ssid.c_str(), pass.c_str());
   Serial.print("Connecting to WiFi ..");
   int cwi = 0;
   while (WiFi.status() != WL_CONNECTED)
@@ -151,14 +169,62 @@ String lerQRcode()
   return string;
 }
 
-int verificaMPU()
-{
+/**
+  @Desc: Verifica se o cadeado está desbloqueado no servidor
+  @Retorno: True -> Desbloqueado | False -> Bloquerado
+**/
+bool enviarEventoMovimentosCadeado() {
+  HTTPClient http;
+  int COD_EVENTO = 401; // Código do evento
+  String serverPath = "http://" + host + ":" + API_PORT + "/api/v1/evento/p/" + COD_EVENTO;
 
-  int vetorCoordenadas[3] = {0, 0, 0};
-  //...
-  //  return vetorCoordenadas;
-  return 0;
+  http.begin(serverPath.c_str());
+  http.addHeader("Authorization", "Basic " + authString);
+  int httpResponseCode = http.POST(String(""));
+  http.end();
+
+#if DEBUG
+  if (httpResponseCode > 0) {
+    Serial.print("HTTP Response code: ");
+    Serial.println(httpResponseCode);
+  } else {
+    Serial.print("Error code: ");
+    Serial.println(httpResponseCode);
+  }
+#endif
 }
+
+/**
+  @Desc: Verifica se o cadeado está desbloqueado no servidor
+  @Retorno: True -> Desbloqueado | False -> Bloquerado
+**/
+bool isCadeadoDesbloqueado() {
+  HTTPClient http;
+
+  String serverPath = "http://" + host + ":" + API_PORT + "/api/v1/cadeado/me/desbloqueado";
+
+  http.begin(serverPath.c_str());
+  http.addHeader("Authorization", "Basic " + authString);
+  int httpResponseCode = http.GET();
+  http.end();
+
+  if (httpResponseCode > 0) {
+#if DEBUG
+    Serial.print("HTTP Response code: ");
+    Serial.println(httpResponseCode);
+#endif
+    return httpResponseCode == 200;
+  }
+  else {
+#if DEBUG
+    Serial.print("Error code: ");
+    Serial.println(httpResponseCode);
+#endif
+  }
+  // Free resources
+  http.end();
+}
+
 /**
   @Desc: Captura uma imagem e envia para o servidor para verificar se um liberador válido
   existe na imagem.
@@ -196,7 +262,7 @@ bool verificarLiberador()
     client.println("Host: " + host);
     client.println("Content-Length: " + String(totalLen));
     client.println("Content-Type: multipart/form-data; boundary=CadeadoEsp");
-    client.println("Authorization: " + authString);
+    client.println("Authorization: Basic " + authString);
     client.println();
     client.print(head);
 
@@ -302,38 +368,49 @@ void iniciaCamera() {
   }
 }
 
+void carregarEEPROM() {
 
-void executarMPU(){
+}
 
-  int statusMovimento=0;
-  //Movimentação
-  if(cadeadoMovendo() && statusMovimento==0){
+// host authString ssid pass
+void salvarEEPROM() {
+  int i = 0;
+
+}
+
+void envioAPI()
+{
+}
+
+int statusMovimento = 0;
+
+void executarMPU() {
+#if DEBUG
+  Serial.println("Verificando dados MPU");
+#endif
+  // Obtem novos valores do sensor
+  atualizarValoresMPU();
+  bool movendo = cadeadoMovendo() || cadeadoGirando();
+  if (movendo && statusMovimento == 0) {
     //Notifica o sistema que o cadeado começou a se mover
-    statusMovimento=1;
+    statusMovimento = 1;
     enviarEventoCadeadoMovendo();
+    enviarEventoCadeadoViolado();
   }
-  if(!cadeadoMovendo() && statusMovimento==1){
+  if (!movendo && statusMovimento == 1) {
     //Notifica o sistema que o cadeado parou de se mover
-    statusMovimento=0;
+    statusMovimento = 0;
     enviarEventoCadeadoParado();
   }
-  if(cadeadoMovendo() && statusMovimento==1){
-    //Notifica o sistema a cada um certo tempo que o cadeado ainda não parou de se mover
-    contagemNotificacaoMPU++;
-    if(contagemNotificacaoMPU>=10){
-      enviarEventoCadeadoContinuaMovimento();
-      contagemNotificacaoMPU=0;
-    }
-  }
+  //  if (cadeadoMovendo() && statusMovimento == 1) {
+  //    //Notifica o sistema a cada um certo tempo que o cadeado ainda não parou de se mover
+  //    contagemNotificacaoMPU++;
+  //    if (contagemNotificacaoMPU >= 10) {
+  //      enviarEventoCadeadoContinuaMovimento();
+  //      contagemNotificacaoMPU = 0;
+  //    }
+  //  }
 
-  //Giro
-  if(cadeadoGirando()){
-    if(!verificaLiberador()){
-      //notifica o sistema que alguém está mechendo no cadeado sem permissão
-      enviarEventoCadeadoViolado();
-      
-    }
-  }  
 }
 
 
@@ -345,7 +422,7 @@ bool enviarEventoCadeadoMovendo() {
 
   http.begin(serverPath.c_str());
   http.addHeader("Authorization", "Basic " + authString);
-  int httpResponseCode = http.POST();
+  int httpResponseCode = http.POST(String(""));
   http.end();
 
 #if DEBUG
@@ -367,7 +444,7 @@ bool enviarEventoCadeadoParado() {
 
   http.begin(serverPath.c_str());
   http.addHeader("Authorization", "Basic " + authString);
-  int httpResponseCode = http.POST();
+  int httpResponseCode = http.POST(String(""));
   http.end();
 
 #if DEBUG
@@ -389,7 +466,7 @@ bool enviarEventoCadeadoContinuaMovimento() {
 
   http.begin(serverPath.c_str());
   http.addHeader("Authorization", "Basic " + authString);
-  int httpResponseCode = http.POST();
+  int httpResponseCode = http.POST(String(""));
   http.end();
 
 #if DEBUG
@@ -411,7 +488,7 @@ bool enviarEventoCadeadoViolado() {
 
   http.begin(serverPath.c_str());
   http.addHeader("Authorization", "Basic " + authString);
-  int httpResponseCode = http.POST();
+  int httpResponseCode = http.POST(String(""));
   http.end();
 
 #if DEBUG
@@ -425,40 +502,74 @@ bool enviarEventoCadeadoViolado() {
 #endif
 }
 
-bool cadeadoMovendo(){
-  
-  // A variável error é utilizada para evitar a deteção de flutuações
-  // Talvez seja necessário mudar o valor dela dependendo dos testes
-  float error = 0.05;
+void atualizarValoresMPU() {
+  // Obtem valores do sensor
+  mpu.getEvent(&a, &g, &temp);
 
-  if(abs(a.acceleration.x)>error){
-    return true;
+  // Valores < 0, primeira leitura
+  if (ax < 0) {
+    ax = abs(a.acceleration.x);
+    ay = abs(a.acceleration.y);
+    az = abs(a.acceleration.z);
+    gx = abs(g.gyro.x);
+    gy = abs(g.gyro.y);
+    gz = abs(g.gyro.z);
+  } else { // Valores >= 0, leituras consecutivas
+    // Tomamos a media com o valor de aceleracao atual como referência
+    ax = (ax + abs(a.acceleration.x)) / 2;
+    ay = (ay + abs(a.acceleration.y)) / 2;
+    az = (az + abs(a.acceleration.z)) / 2;
+    gx = (gx + abs(g.gyro.x)) / 2;
+    gy = (gy + abs(g.gyro.y)) / 2;
+    gz = (gz + abs(g.gyro.z)) / 2;
   }
-  else if(abs(a.acceleration.y)>error){
-    return true;
-  }
-  else if(abs(a.acceleration.z)>error){
-    return true;
-  }
-
-  return false;  
 }
 
-bool cadeadoGirando(){
-  
+bool cadeadoMovendo() {
+
+  // A variável error é utilizada para evitar a deteção de flutuações
+  // Talvez seja necessário mudar o valor dela dependendo dos testes
+  float error = 0.05;
+#if DEBUG
+  Serial.println(" A  " + String(a.acceleration.x) + " " + String(a.acceleration.y) + " " + String(a.acceleration.z));
+  Serial.println("<A> " + String(ax) + " " + String(ay) + " " + String(az));
+  Serial.println("%A  " + String(pow(ax - abs(a.acceleration.x), 2) / ax) + " " + String(pow(ay - abs(a.acceleration.y), 2) / ay) + " " + String(pow(az - abs(a.acceleration.z), 2) / az));
+#endif
+
+  if (ax != 0 && pow(ax - abs(a.acceleration.x), 2) / ax > error) {
+    return true;
+  }
+  else if (ay != 0 && pow(ay - abs(a.acceleration.y), 2) / ay > error) {
+    return true;
+  }
+  else if (az != 0 && pow(az - abs(a.acceleration.z), 2) / az > error) {
+    return true;
+  }
+
+  return false;
+}
+
+bool cadeadoGirando() {
+
+#if DEBUG
+  Serial.println(" G  " + String(g.gyro.x) + " " + String(g.gyro.y) + " " + String(g.gyro.z));
+  Serial.println("<G> " + String(gx) + " " + String(gy) + " " + String(gz));
+  Serial.println("%G  " + String(pow(gx - abs(g.gyro.x), 2) / gx) + " " + String(pow(gy - abs(g.gyro.y), 2) / gy) + " " + String(pow(gz - abs(g.gyro.z), 2) / gz));
+#endif
+
   // A variável error é utilizada para evitar a deteção de flutuações
   // Talvez seja necessário mudar o valor dela dependendo dos testes
   float error = 0.05;
 
-  if(abs(g.gyro.x)>error){
+  if (gx != 0 && pow(gx - abs(g.gyro.x), 2) / gx > error) {
     return true;
   }
-  else if(abs(g.gyro.y)>error){
+  else if (gy != 0 && pow(gy - abs(g.gyro.y), 2) / gy > error) {
     return true;
   }
-  else if(abs(g.gyro.z)>error){
+  else if (gz != 0 && pow(gz - abs(g.gyro.z), 2) / gz > error) {
     return true;
   }
 
-  return false;  
+  return false;
 }
