@@ -16,8 +16,8 @@ module.exports = asyncHandler(async (req, res, next) => {
     );
     const info = base64.toString('utf8').split(':');
     if (info.length >= 2) {
-      private_key = info[0];
-      public_key = info[1];
+      public_key = info[0];
+      private_key = info[1];
     }
   }
 
