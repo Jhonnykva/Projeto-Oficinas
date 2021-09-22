@@ -6,6 +6,7 @@
 #include "soc/rtc_cntl_reg.h"
 #include "esp_camera.h"
 #include <EEPROM.h>
+#include <Servo.h>
 
 #define EEPROM_LENGTH 512
 
@@ -36,8 +37,9 @@
 #define API_PORT 5000
 
 // Controle servo
-//Servo servo;
-const int pinServo = 4;
+#define PIN_SERVO 13
+Servo servo;
+int pos = 0;
 
 // Controle Giroscópio
 const int MPU_ADDRESS = 0x68; // MPU6050 I2C address
@@ -77,7 +79,7 @@ void setup()
 
   //Configuração do Servo-Motor
   //PS: talvez seja necesxário colocar essa função antes de serial.begin().
-  //  servo.attach(pinServo);
+  servo.attach(PIN_SERVO,2);
 
   //Ajusta todas as configurações iniciais para o Wifi
   setupWifi();
@@ -101,8 +103,11 @@ void loop()
   if (!desbloqueado) {
     bool liberadorStatus = verificarLiberador();
     if (!liberadorStatus) {
+      fecharCadeado();
       // Verifica movimento caso o cadeado esteja bloqueado
       executarMPU();
+    } else {
+      abrirCadeado();
     }
 #if DEBUG
     if (liberadorStatus) {
@@ -111,6 +116,8 @@ void loop()
       Serial.println("Liberador inválido");
     }
 #endif
+  } else {
+    abrirCadeado();
   }
   delay(500);
   //  sleep(10);
@@ -141,12 +148,18 @@ void setupWifi()
 //Funções para abrir ou fechar cadeado de acordo com a permissão do sistema
 void abrirCadeado()
 {
-  //    servo.write(180);
+  if (pos != 180) {
+    pos = 180;
+    servo.write(pos);
+  }
 }
 
 void fecharCadeado()
 {
-  //    servo.write(0);
+  if (pos != 0) {
+    pos = 0;
+    servo.write(0);
+  }
 }
 
 bool permissaoCadeado()
