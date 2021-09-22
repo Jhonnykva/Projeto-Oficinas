@@ -202,7 +202,8 @@ exports.getcadeadoConfigQR = asyncHandler(async (req, res, next) => {
   ).toString('base64');
 
   const qr = await QrCode.toDataURL(
-    `Basic ${token};${req.body.ssid};${req.body.pass}`
+    `${token};${req.body.ssid};${req.body.pass}`,
+    { errorCorrectionLevel: 'L', width: 500 }
   );
   res.status(200).json({ data: qr });
 });

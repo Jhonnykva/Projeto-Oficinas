@@ -62,7 +62,7 @@ exports.registerEventoPredeterminado = asyncHandler(async (req, res, next) => {
   let evento = null;
   switch (idTipoEvento) {
     // Giroscopio detectou movimento não esperado
-    case '100':
+    case '404':
       evento = await Evento.create({
         id_usuario: cadeado.id_usuario,
         id_cadeado: req.cadeado.id,
@@ -71,11 +71,17 @@ exports.registerEventoPredeterminado = asyncHandler(async (req, res, next) => {
         tipo: 'critical',
       });
       break;
+    case '402':
+      break;
+    case '403':
+      break;
+    case '401':
+      break;
     default:
       return next(
         new ErrorResponse(`Tipo evento ${idTipoEvento} inválido`, 400)
       );
   }
 
-  res.status(200).json({ data: evento.id });
+  res.status(200).json({ data: evento ? evento.id : null });
 });
