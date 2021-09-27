@@ -383,17 +383,67 @@ void iniciaCamera() {
 
 void carregarEEPROM() {
 
+  unsigned int tam=sizeof(int);
+  unsigned int i, j, k, l, m;
+
+  host ="";
+  authString ="";
+  ssid ="";
+  pass ="";
+
+  //int usa 2 bytes, então estou lendo cada byte e dando os pesos para transformar os bytes em int novamente
+  //Não tenho certeza como o sistema grava isso, então pode estar invertido
+  i=(EEPROM.read(0)*256) + EEPROM.read(1);
+  j=(EEPROM.read(tam)*256) + EEPROM.read(tam+1);
+  k=(EEPROM.read(2*tam)*256) + EEPROM.read((2*tam)+1);
+  l=(EEPROM.read(3*tam)*256) + EEPROM.read((3*tam)+1);
+  
+  m=sizeof(i)+sizeof(j)+sizeof(k)+sizeof(l);
+
+  for(int p=0;p<i;p++){
+    host = host + EEPROM.read(m+p); 
+  }
+  //Se ocorrer algum problema, talvez incrementar '\0' resolva
+  for(int p=0;p<j;p++){
+    authString = authString + EEPROM.read(m+p); 
+  }
+  for(int p=0;p<k;p++){
+    ssid = ssid + EEPROM.read(m+p); 
+  }
+  for(int p=0;p<l;p++){
+    pass = pass + EEPROM.read(m+p); 
+  }
+  
+
 }
 
 // host authString ssid pass
 void salvarEEPROM() {
-  int i = 0;
+  
+  unsigned int i, j, k, l;
+   
+  i= strlen(host);
+  j= i+(strlen(authString));
+  k= j+(strlen(ssid));
+  l= k+(strlen(pass));
+
+  m=sizeof(i)+sizeof(j)+sizeof(k)+sizeof(l);
+  
+  //Coloca inicialmente 4 valores, que representam o tamanho das quatro primeiras strings
+  //Coloca logo em seguida as 4 strings
+  //Estou considerando que a função write utiliza todos os bytes necessários para gravar a partir do endereço, e não que grava somente o byte de endereço...
+  //Caso seja a segunda opção, modifico depois.
+  EEPROM.write(0,i);
+  EEPROM.write(sizeof(i),j);
+  EEPROM.write((sizeof(i)+sizeof(j)),k);
+  EEPROM.write((sizeof(i)+sizeof(j)+sizof(k)),l);
+  EEPROM.write(m,host);
+  EEPROM.write((i+m),authString);
+  EEPROM.write((j+m), ssid);
+  EEPROM.write((k+m), pass);
 
 }
 
-void envioAPI()
-{
-}
 
 int statusMovimento = 0;
 
