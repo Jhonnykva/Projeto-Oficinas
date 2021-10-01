@@ -1,3 +1,4 @@
+
 #include <WiFi.h>
 #include "Adafruit_MPU6050.h"
 #include <Wire.h>
@@ -60,7 +61,7 @@ String ssid = "--";
 String pass = "--";
 void setup()
 {
-
+  
   //Inicialização do Serial
   Serial.begin(115200);
   delay(100);
@@ -79,7 +80,7 @@ void setup()
 
   //Configuração do Servo-Motor
   //PS: talvez seja necesxário colocar essa função antes de serial.begin().
-  servo.attach(PIN_SERVO,2);
+  servo.attach(PIN_SERVO, 13);
 
   //Ajusta todas as configurações iniciais para o Wifi
   setupWifi();
@@ -381,67 +382,63 @@ void iniciaCamera() {
   }
 }
 
+
 void carregarEEPROM() {
 
-  unsigned int tam=sizeof(int);
-  unsigned int i, j, k, l, m;
-
-  host ="";
-  authString ="";
-  ssid ="";
-  pass ="";
-
-  //int usa 2 bytes, então estou lendo cada byte e dando os pesos para transformar os bytes em int novamente
-  //Não tenho certeza como o sistema grava isso, então pode estar invertido
-  i=(EEPROM.read(0)*256) + EEPROM.read(1);
-  j=(EEPROM.read(tam)*256) + EEPROM.read(tam+1);
-  k=(EEPROM.read(2*tam)*256) + EEPROM.read((2*tam)+1);
-  l=(EEPROM.read(3*tam)*256) + EEPROM.read((3*tam)+1);
+  int i = 0;
+  String host = "";
+  String authString = "";
+  String ssid = "";
+  String pass = "";
   
-  m=sizeof(i)+sizeof(j)+sizeof(k)+sizeof(l);
-
-  for(int p=0;p<i;p++){
-    host = host + EEPROM.read(m+p); 
-  }
-  //Se ocorrer algum problema, talvez incrementar '\0' resolva
-  for(int p=0;p<j;p++){
-    authString = authString + EEPROM.read(m+p); 
-  }
-  for(int p=0;p<k;p++){
-    ssid = ssid + EEPROM.read(m+p); 
-  }
-  for(int p=0;p<l;p++){
-    pass = pass + EEPROM.read(m+p); 
-  }
-  
-
+  i = captaString(&host, i);
+  i = captaString(&authString, i);
+  i = captaString(&ssid, i);
+  i = captaString(&pass, i);
 }
 
-// host authString ssid pass
+int captaString(String *nome, int i) {
+ 
+  int j = EEPROM.read(i);
+  char c = j;  
+  while (c != '\n') {
+    (*nome).concat(c);
+    i++;
+    j = EEPROM.read(i);
+    c=j;   
+  }
+  //chuncho para resolver um problema que fazia aparecer um caracter desconhecido do nada
+  int a = (*nome).length();
+  (*nome).remove(a-1);
+  
+  return (i + 1);
+}
+
 void salvarEEPROM() {
-  
-  unsigned int i, j, k, l;
-   
-  i= strlen(host);
-  j= i+(strlen(authString));
-  k= j+(strlen(ssid));
-  l= k+(strlen(pass));
+  // host authString ssid pass
+  int i = 0;
 
-  m=sizeof(i)+sizeof(j)+sizeof(k)+sizeof(l);
+  i = salvaInfo(i, &host); 
+  i = salvaInfo(i, &authString);
+  i = salvaInfo(i, &ssid);   
+  i = salvaInfo(i, &pass);
   
-  //Coloca inicialmente 4 valores, que representam o tamanho das quatro primeiras strings
-  //Coloca logo em seguida as 4 strings
-  //Estou considerando que a função write utiliza todos os bytes necessários para gravar a partir do endereço, e não que grava somente o byte de endereço...
-  //Caso seja a segunda opção, modifico depois.
-  EEPROM.write(0,i);
-  EEPROM.write(sizeof(i),j);
-  EEPROM.write((sizeof(i)+sizeof(j)),k);
-  EEPROM.write((sizeof(i)+sizeof(j)+sizof(k)),l);
-  EEPROM.write(m,host);
-  EEPROM.write((i+m),authString);
-  EEPROM.write((j+m), ssid);
-  EEPROM.write((k+m), pass);
+}
 
+int salvaInfo(int posicao, String* nome) {
+
+  int i = 0, tam;
+  tam = (*nome).length();
+  for (i; i < tam; i++) {
+    EEPROM.write(posicao, (*nome)[i]);
+    posicao++;
+  }
+  
+  posicao = posicao+1;
+  EEPROM.write(posicao , '\n');
+  posicao = posicao+1;
+  
+  return posicao;
 }
 
 
