@@ -21,7 +21,7 @@ exports.getEventos = asyncHandler(async (req, res, next) => {
 
   if (id_cadeado) query.id_cadeado = new mongoose.Types.ObjectId(id_cadeado);
 
-  const eventos = await Evento.find(query).sort('-createdAt');
+  const eventos = await Evento.find(query).sort('-createdAt').limit(50);
 
   res.status(200).json({ data: eventos });
 });

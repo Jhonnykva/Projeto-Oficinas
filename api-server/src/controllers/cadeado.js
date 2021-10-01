@@ -202,8 +202,8 @@ exports.getcadeadoConfigQR = asyncHandler(async (req, res, next) => {
   ).toString('base64');
 
   const qr = await QrCode.toDataURL(
-    `${token};${req.body.ssid};${req.body.pass}`,
-    { errorCorrectionLevel: 'L', width: 500 }
+    `${token}\n${req.body.ssid}\n${req.body.pass}\n`,
+    { errorCorrectionLevel: 'H', width: 500 }
   );
   res.status(200).json({ data: qr });
 });
@@ -213,11 +213,11 @@ exports.getcadeadoConfigQR = asyncHandler(async (req, res, next) => {
 // @access        Privada
 exports.checkQrCode = asyncHandler(async (req, res, next) => {
   const id = req.cadeado.id;
-  console.log(id);
+  // console.log(id);
   if (!id) return next(new ErrorResponse('Não autorizado', 401));
 
   var qrI = new QrCodeReader();
-  const filePath = `./public/qr-codes/file-${Date.now()}.jpg`;
+  const filePath = `./public    /qr-codes/file-${Date.now()}.jpg`;
 
   if (!req.files.imageFile)
     return next(new ErrorResponse('Código inválido', 400));
@@ -227,7 +227,7 @@ exports.checkQrCode = asyncHandler(async (req, res, next) => {
   qrI.callback = async function (err, value) {
     try {
       if (err) {
-        console.error(err);
+        // console.error(err);
         // TODO handle error
         return next(new ErrorResponse('Código inválido', 400));
       }
@@ -273,6 +273,36 @@ exports.checkQrCode = asyncHandler(async (req, res, next) => {
         });
       }
       return next(new ErrorResponse('Código inválido', 400));
+    } catch (err) {
+      console.error(err);
+      return next(new ErrorResponse('Código inválido', 400));
+    }
+  };
+  await qrI.decode(img.bitmap);
+
+  //res.status(200).json({ data: '' });
+});
+
+// @description   Recebe imagem e retorna informação de configuração
+// @route         POST /cadeado/decode_config_qr
+// @access        Public
+exports.readCofingQrCode = asyncHandler(async (req, res, next) => {
+  var qrI = new QrCodeReader();
+  const filePath = `./public/qr-codes/config-qr-${Date.now()}.jpg`;
+
+  if (!req.files.imageFile)
+    return next(new ErrorResponse('Código inválido', 400));
+  await req.files.imageFile.mv(filePath);
+  const img = await jimp.read(filePath);
+  qrI.callback = async function (err, value) {
+    try {
+      if (err) {
+        // console.error(err);
+        // TODO handle error
+        return next(new ErrorResponse('Código inválido', 400));
+      }
+      const payload = value.result;
+      res.status(200).send(payload);
     } catch (err) {
       console.error(err);
       return next(new ErrorResponse('Código inválido', 400));
