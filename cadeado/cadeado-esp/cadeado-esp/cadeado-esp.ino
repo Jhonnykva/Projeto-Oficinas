@@ -9,7 +9,7 @@
 #include <EEPROM.h>
 #include <Servo.h>
 
-#define EEPROM_LENGTH 512
+#define EEPROM_LENGTH 1024
 
 // Definições de pinos internos
 #define DEBUG 1
@@ -35,7 +35,7 @@
 #define I2C_SCL 14
 
 // Servidor
-#define API_PORT 5000
+#define API_PORT 5055
 
 // Controle servo
 #define PIN_SERVO 13
@@ -61,7 +61,8 @@ String ssid = "--";
 String pass = "--";
 void setup()
 {
-  
+  // Inicia EEPROM
+  EEPROM.begin(EEPROM_LENGTH);
   //Inicialização do Serial
   Serial.begin(115200);
   delay(100);
@@ -79,21 +80,25 @@ void setup()
     Serial.println("Giroscopio iniciado!");
 
   //Configuração do Servo-Motor
-  //PS: talvez seja necesxário colocar essa função antes de serial.begin().
-  servo.attach(PIN_SERVO, 13);
+  servo.attach(PIN_SERVO);
 
+  // Carrega parametros desde EEPROM
+  carregarEEPROM();
+  iniciaCamera();
   //Ajusta todas as configurações iniciais para o Wifi
   setupWifi();
-  iniciaCamera();
+  // Verifica se não existe um cod de configuração
+  delay(1000);
+  verificarCodConfig();
 }
 
+bool desbloqueado = false;
 void loop()
 {
-
   /* Pega a imagem da camera e envia para o servidor
       para verificar se existe um liberador na imagem
   */
-  bool desbloqueado = isCadeadoDesbloqueado();
+  desbloqueado = isCadeadoDesbloqueado();
 #if DEBUG
   if (desbloqueado) {
     Serial.println("Cadeado Desbloqueado");
@@ -133,15 +138,16 @@ void loop()
 
 void setupWifi()
 {
-
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid.c_str(), pass.c_str());
   Serial.print("Connecting to WiFi ..");
   int cwi = 0;
-  while (WiFi.status() != WL_CONNECTED)
+  unsigned int timeWaited = 0;
+  while (WiFi.status() != WL_CONNECTED && timeWaited < 30000)
   {
     Serial.print('.');
     delay(1000);
+//    timeWaited += 1000;
   }
   Serial.println(WiFi.localIP());
 }
@@ -161,26 +167,6 @@ void fecharCadeado()
     pos = 0;
     servo.write(0);
   }
-}
-
-bool permissaoCadeado()
-{
-
-  bool permissao = false;
-  //fazer a interação de permissão com a API
-  //...
-
-  return permissao;
-}
-
-//Funções para CAM
-String lerQRcode()
-{
-
-  String string;
-  //fazer a leitura pela câmera.
-  //...
-  return string;
 }
 
 /**
@@ -213,11 +199,13 @@ bool enviarEventoMovimentosCadeado() {
   @Retorno: True -> Desbloqueado | False -> Bloquerado
 **/
 bool isCadeadoDesbloqueado() {
+  bool status = false;
   HTTPClient http;
-
+  
   String serverPath = "http://" + host + ":" + API_PORT + "/api/v1/cadeado/me/desbloqueado";
 
   http.begin(serverPath.c_str());
+  http.addHeader("Content-Type", "Application/JSON");
   http.addHeader("Authorization", "Basic " + authString);
   int httpResponseCode = http.GET();
   http.end();
@@ -227,7 +215,7 @@ bool isCadeadoDesbloqueado() {
     Serial.print("HTTP Response code: ");
     Serial.println(httpResponseCode);
 #endif
-    return httpResponseCode == 200;
+    status = httpResponseCode == 200;
   }
   else {
 #if DEBUG
@@ -237,6 +225,7 @@ bool isCadeadoDesbloqueado() {
   }
   // Free resources
   http.end();
+  return status;
 }
 
 /**
@@ -258,12 +247,12 @@ bool verificarLiberador()
     ESP.restart();
   }
 #if DEBUG
-  Serial.println("Connecting to server: " + host);
+  Serial.println("Conectando ao servidor: " + host);
 #endif
   if (client.connect(host.c_str(), API_PORT))
   {
 #if DEBUG
-    Serial.println("Connection successful!");
+    Serial.println("Conectado !");
 #endif
     String head = "--CadeadoEsp\r\nContent-Disposition: form-data; name=\"imageFile\"; filename=\"esp32-cam.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n";
     String tail = "\r\n--CadeadoEsp--\r\n";
@@ -332,7 +321,6 @@ bool verificarLiberador()
     Serial.println(res);
 #endif
     client.stop();
-    //    Serial.println(getBody);
     return res.charAt(0) == '2' && res.charAt(1) == '0';
   } else {
 #if DEBUG
@@ -343,6 +331,130 @@ bool verificarLiberador()
   return false;
 }
 
+/**
+  @Desc: Captura uma imagem e envia para o servidor para buscar um código de configuração válido
+**/
+void verificarCodConfig() {
+  String res = "", aux = "";
+  camera_fb_t *fb = NULL;
+  fb = esp_camera_fb_get();
+  if (!fb)
+  {
+#if DEBUG
+    Serial.println("Erro ao obter imagem da camera");
+#endif
+    delay(1000);
+    ESP.restart();
+  }
+#if DEBUG
+  Serial.println("Conectando ao servidor: " + host);
+#endif
+  if (client.connect(host.c_str(), API_PORT))
+  {
+#if DEBUG
+    Serial.println("Conectado !");
+#endif
+    String head = "--CadeadoEsp\r\nContent-Disposition: form-data; name=\"imageFile\"; filename=\"esp32-cam.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n";
+    String tail = "\r\n--CadeadoEsp--\r\n";
+
+    uint32_t imageLen = fb->len;
+    uint32_t extraLen = head.length() + tail.length();
+    uint32_t totalLen = imageLen + extraLen;
+
+    client.println("POST /api/v1/cadeado/decode_config_qr HTTP/1.1");
+    client.println("Host: " + host);
+    client.println("Content-Length: " + String(totalLen));
+    client.println("Content-Type: multipart/form-data; boundary=CadeadoEsp");
+    client.println("Authorization: Basic " + authString);
+    client.println();
+    client.print(head);
+
+    uint8_t *fbBuf = fb->buf;
+    size_t fbLen = fb->len;
+    for (size_t n = 0; n < fbLen; n = n + 1024)
+    {
+      if (n + 1024 < fbLen)
+      {
+        client.write(fbBuf, 1024);
+        fbBuf += 1024;
+      }
+      else if (fbLen % 1024 > 0)
+      {
+        size_t remainder = fbLen % 1024;
+        client.write(fbBuf, remainder);
+      }
+    }
+    client.print(tail);
+
+    esp_camera_fb_return(fb);
+
+    int timoutTimer = 10000;
+    long startTimer = millis();
+    boolean state = false;
+
+    while (!state && (startTimer + timoutTimer) > millis())
+    {
+#if DEBUG
+      Serial.print(".");
+#endif
+      delay(100);
+      while (client.available()) {
+        char c = client.read();
+        if (c == '\n') {
+          if (aux.length() == 0) {
+            state = true;
+          }
+          aux = "";
+        }
+        else if (c != '\r') {
+          aux += String(c);
+        }
+        if (state == true) {
+          res += String(c);
+        }
+        startTimer = millis();
+      }
+      if (res.length() > 0) {
+        break;
+      }
+    }
+#if DEBUG
+    Serial.println(aux);
+    Serial.println(res);
+#endif
+    client.stop();
+    if (res.charAt(1) != '{'){
+      atualizarParametros(res);
+    }
+  } else {
+#if DEBUG
+    Serial.println("Conexão a " + host + " falida.");
+#endif
+  }
+}
+
+// Atualizar
+void atualizarParametros(String& res) {
+  int i = 1;
+  authString = "";
+  while (res.charAt(i) != '\n') {
+    authString += res.charAt(i);
+    i++;
+  }
+  i++;
+  ssid = "";
+  while (res.charAt(i) != '\n') {
+    ssid += res.charAt(i);
+    i++;
+  }
+  i++;
+  pass = "";
+  while (res.charAt(i) != '\n') {
+    pass += res.charAt(i);
+    i++;
+  }
+  salvarEEPROM();
+}
 
 void iniciaCamera() {
   camera_config_t config;
@@ -368,7 +480,7 @@ void iniciaCamera() {
   config.pixel_format = PIXFORMAT_JPEG;
 
   // Define qualidade da imagen
-  config.frame_size = FRAMESIZE_XGA;
+  config.frame_size = FRAMESIZE_SVGA;
   config.jpeg_quality = 10;  //0-63 lower number means higher quality
   config.fb_count = 2;
 
@@ -376,7 +488,9 @@ void iniciaCamera() {
   // camera init
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
-    Serial.printf("Camera init failed with error 0x%x", err);
+    #if DEBUG
+    Serial.printf("Erro ao iniciar a camera: 0x%x", err);
+    #endif
     delay(1000);
     ESP.restart();
   }
@@ -384,45 +498,75 @@ void iniciaCamera() {
 
 
 void carregarEEPROM() {
-
   int i = 0;
-  String host = "";
-  String authString = "";
-  String ssid = "";
-  String pass = "";
-  
-  i = captaString(&host, i);
-  i = captaString(&authString, i);
-  i = captaString(&ssid, i);
-  i = captaString(&pass, i);
+
+  char by =  EEPROM.read(i++);
+  bool eepromValid = by == 'T';
+
+  if (eepromValid) {
+    host = "";
+    authString = "";
+    ssid = "";
+    pass = "";
+    i = captaString(&host, i);
+    i = captaString(&authString, i);
+    i = captaString(&ssid, i);
+    i = captaString(&pass, i);
+  }
+
+  ssid = "GV_K";
+  pass = "ckd5998506";
+#if DEBUG
+  if (eepromValid) {
+    Serial.println("#### Carregado desde EEPROM ####");
+  } else {
+    Serial.println("#### EEPROM  inválido ####");
+  }
+  Serial.println("Host: " + host);
+  Serial.println("Server token: " + authString);
+  Serial.println("WiFi: " + ssid + " " + pass);
+  Serial.println(ssid.c_str());
+  Serial.println("################################");
+#endif
 }
 
 int captaString(String *nome, int i) {
- 
+
   int j = EEPROM.read(i);
-  char c = j;  
+  char c = j;
   while (c != '\n') {
     (*nome).concat(c);
     i++;
     j = EEPROM.read(i);
-    c=j;   
+    c = j;
   }
   //chuncho para resolver um problema que fazia aparecer um caracter desconhecido do nada
   int a = (*nome).length();
-  (*nome).remove(a-1);
-  
+  (*nome).remove(a - 1);
+
   return (i + 1);
 }
 
 void salvarEEPROM() {
+
+#if DEBUG
+  Serial.println("#### Salvando em EEPROM ####");
+  Serial.println("Host: " + host);
+  Serial.println("Server token: " + authString);
+  Serial.println("WiFi: " + ssid + " " + pass);
+  Serial.println("################################");
+#endif
+
   // host authString ssid pass
   int i = 0;
-
-  i = salvaInfo(i, &host); 
+  EEPROM.write(i++, 'T');
+  i = salvaInfo(i, &host);
   i = salvaInfo(i, &authString);
-  i = salvaInfo(i, &ssid);   
+  i = salvaInfo(i, &ssid);
   i = salvaInfo(i, &pass);
-  
+
+  EEPROM.commit();
+
 }
 
 int salvaInfo(int posicao, String* nome) {
@@ -433,11 +577,11 @@ int salvaInfo(int posicao, String* nome) {
     EEPROM.write(posicao, (*nome)[i]);
     posicao++;
   }
-  
-  posicao = posicao+1;
+
+  posicao = posicao + 1;
   EEPROM.write(posicao , '\n');
-  posicao = posicao+1;
-  
+  posicao = posicao + 1;
+
   return posicao;
 }
 
