@@ -1,0 +1,7 @@
+(fp_lib_table
+  (lib (name LIB_ESP32-CAM)(type KiCad)(uri ${KIPRJMOD}/LIB_ESP32-CAM.pretty)(options "")(descr ""))
+  (lib (name footprint-esp32-cam)(type KiCad)(uri ${KIPRJMOD}/footprint-esp32-cam.pretty)(options "")(descr ""))
+  (lib (name LM7805)(type KiCad)(uri "D:/UTF/#UTF-5p/Desenho técnico aplicado/bibliotecas kicad/LM7805.pretty")(options "")(descr ""))
+  (lib (name lm7805)(type KiCad)(uri "D:/UTF/#UTF-5p/Desenho técnico aplicado/bibliotecas kicad/LM7805/lm7805.pretty")(options "")(descr ""))
+  (lib (name "LM7805 (1)")(type KiCad)(uri "D:/UTF/#UTF-5p/Desenho técnico aplicado/bibliotecas kicad/LM7805 (1).pretty")(options "")(descr ""))
+)

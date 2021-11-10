@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name bib-esp32)(type Legacy)(uri ${KIPRJMOD}/bib-esp32.lib)(options "")(descr ""))
+  (lib (name mpu-6050)(type Legacy)(uri ${KIPRJMOD}/mpu-6050.lib)(options "")(descr ""))
+)
