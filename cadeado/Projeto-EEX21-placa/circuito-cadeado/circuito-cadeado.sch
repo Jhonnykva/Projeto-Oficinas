@@ -150,8 +150,6 @@ Wire Wire Line
 	6200 3250 6000 3250
 Wire Wire Line
 	6000 3250 6000 3400
-Wire Wire Line
-	6000 3400 5400 3400
 Connection ~ 5400 3400
 $Comp
 L Connector_Generic:Conn_01x08 mpu6050
@@ -166,8 +164,6 @@ F 3 "~" H 4800 4550 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	6200 2850 6100 2850
-Wire Wire Line
-	6100 2850 6100 4200
 Wire Wire Line
 	6100 4200 4600 4200
 Wire Wire Line
@@ -184,8 +180,6 @@ Wire Wire Line
 	4500 4350 4500 4150
 Wire Wire Line
 	4500 4150 4650 4150
-Wire Wire Line
-	4650 4150 4650 3600
 Connection ~ 4650 3400
 Wire Wire Line
 	4650 3400 4750 3400
@@ -244,10 +238,6 @@ Wire Wire Line
 	7500 2950 7750 2950
 NoConn ~ 7750 2650
 NoConn ~ 7750 3050
-Wire Wire Line
-	6200 2650 6150 2650
-Wire Wire Line
-	6150 2650 6150 3500
 Wire Wire Line
 	6150 3500 7250 3500
 Wire Wire Line
@@ -331,10 +321,8 @@ Wire Wire Line
 Wire Wire Line
 	6950 4100 6950 3350
 Wire Wire Line
-	4400 4100 6950 4100
+	4400 4100 6900 4100
 NoConn ~ 6200 2750
-NoConn ~ 6200 3050
-NoConn ~ 6200 3150
 NoConn ~ 6950 2950
 NoConn ~ 6950 3250
 $Comp
@@ -350,7 +338,7 @@ F 3 "~" H 3950 3050 50  0001 C CNN
 $EndComp
 Connection ~ 4300 2850
 Wire Wire Line
-	4300 2850 4300 2650
+	4300 2850 4300 2800
 Wire Wire Line
 	4300 2900 4300 2850
 $Comp
@@ -379,19 +367,16 @@ Connection ~ 4350 3400
 Wire Wire Line
 	4350 3400 4450 3400
 $Comp
-L Connector_Generic:Conn_01x02 Gnd0
+L Connector_Generic:Conn_01x02 Bateria1
 U 1 1 6198ACB5
-P 5100 3600
-F 0 "Gnd0" V 5064 3412 50  0000 R CNN
-F 1 "0" V 4973 3412 50  0000 R CNN
-F 2 "Connector_PinSocket_2.54mm:PinSocket_1x02_P2.54mm_Vertical" H 5100 3600 50  0001 C CNN
-F 3 "~" H 5100 3600 50  0001 C CNN
-	1    5100 3600
+P 4450 3050
+F 0 "Bateria1" V 4414 2862 50  0000 R CNN
+F 1 "0" V 4323 2862 50  0000 R CNN
+F 2 "Connector_PinSocket_2.54mm:PinSocket_1x02_P2.54mm_Vertical" H 4450 3050 50  0001 C CNN
+F 3 "~" H 4450 3050 50  0001 C CNN
+	1    4450 3050
 	1    0    0    -1  
 $EndComp
-Connection ~ 4650 3600
-Wire Wire Line
-	4650 3600 4650 3400
 Wire Wire Line
 	3400 3000 3400 3050
 Wire Wire Line
@@ -413,13 +398,111 @@ Wire Wire Line
 Wire Wire Line
 	4050 3600 4050 3400
 Wire Wire Line
-	4050 3400 4350 3400
+	4050 3400 4250 3400
 Connection ~ 3650 3600
 Wire Wire Line
-	4900 3700 4900 3600
-Connection ~ 4900 3600
-Wire Wire Line
-	4650 3600 4900 3600
-Wire Wire Line
 	3400 3050 3750 3050
+Wire Wire Line
+	4250 3150 4250 3400
+Connection ~ 4250 3400
+Wire Wire Line
+	4250 3400 4350 3400
+Wire Wire Line
+	4250 3050 4200 3050
+Wire Wire Line
+	4200 3050 4200 2800
+Wire Wire Line
+	4200 2800 4300 2800
+Connection ~ 4300 2800
+Wire Wire Line
+	4300 2800 4300 2650
+$Comp
+L Connector_Generic:Conn_01x02 Gnd2
+U 1 1 618CDBE9
+P 4950 3550
+F 0 "Gnd2" V 4914 3362 50  0000 R CNN
+F 1 "0" V 4823 3362 50  0000 R CNN
+F 2 "Connector_PinSocket_2.54mm:PinSocket_1x02_P2.54mm_Vertical" H 4950 3550 50  0001 C CNN
+F 3 "~" H 4950 3550 50  0001 C CNN
+	1    4950 3550
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	4650 3400 4650 3650
+Wire Wire Line
+	4750 3550 4700 3550
+Wire Wire Line
+	4700 3550 4700 3650
+Wire Wire Line
+	4700 3650 4750 3650
+Wire Wire Line
+	4700 3650 4650 3650
+Connection ~ 4700 3650
+Connection ~ 4650 3650
+Wire Wire Line
+	4650 3650 4650 4150
+Wire Wire Line
+	6100 2850 6100 4200
+Wire Wire Line
+	6150 3500 6150 3050
+Wire Wire Line
+	6150 3050 6200 3050
+NoConn ~ 6200 2650
+$Comp
+L Device:R R4
+U 1 1 618F03C6
+P 6100 4550
+F 0 "R4" H 6170 4596 50  0000 L CNN
+F 1 "10K" H 6170 4505 50  0000 L CNN
+F 2 "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P7.62mm_Horizontal" V 6030 4550 50  0001 C CNN
+F 3 "~" H 6100 4550 50  0001 C CNN
+	1    6100 4550
+	0    1    1    0   
+$EndComp
+$Comp
+L Connector_Generic:Conn_01x02 buttom1
+U 1 1 618F353E
+P 6750 4450
+F 0 "buttom1" V 6714 4262 50  0000 R CNN
+F 1 "0" V 6623 4262 50  0000 R CNN
+F 2 "Connector_PinSocket_2.54mm:PinSocket_1x02_P2.54mm_Vertical" H 6750 4450 50  0001 C CNN
+F 3 "~" H 6750 4450 50  0001 C CNN
+	1    6750 4450
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7050 4250 6900 4250
+Wire Wire Line
+	6900 4250 6900 4100
+Connection ~ 6900 4100
+Wire Wire Line
+	6900 4100 6950 4100
+Wire Wire Line
+	5400 3400 5700 3400
+Wire Wire Line
+	6200 3150 5950 3150
+Wire Wire Line
+	5950 3150 5950 4450
+Wire Wire Line
+	5950 4450 6300 4450
+Wire Wire Line
+	6300 4450 6300 4550
+Wire Wire Line
+	6300 4550 6250 4550
+Connection ~ 6300 4450
+Wire Wire Line
+	6300 4450 6550 4450
+Wire Wire Line
+	5950 4550 5700 4550
+Wire Wire Line
+	5700 4550 5700 3400
+Connection ~ 5700 3400
+Wire Wire Line
+	5700 3400 6000 3400
+Wire Wire Line
+	6550 4550 6550 4750
+Wire Wire Line
+	6550 4750 7050 4750
+Wire Wire Line
+	7050 4750 7050 4250
 $EndSCHEMATC
