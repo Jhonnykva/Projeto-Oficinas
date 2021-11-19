@@ -9,6 +9,7 @@ const {
   getcadeadoConfigQR,
   checkQrCode,
   readCofingQrCode,
+  bloquearCadeado,
 } = require('../controllers/cadeado');
 const liberadorRouter = require('./liberador');
 const userAuth = require('../middleware/userAuth');
@@ -20,6 +21,7 @@ router.use('/:id_cadeado/liberador', liberadorRouter);
 router.route('/').get(userAuth, getCadeados).post(userAuth, registerCadeado);
 router.route('/me/desbloqueado').get(cadeadoAuth, isDesbloqueado);
 router.route('/me/desbloquear').get(cadeadoAuth, desbloquearCadeado);
+router.route('/me/bloquear').put(cadeadoAuth, bloquearCadeado);
 router
   .route('/:id_cadeado')
   .get(userAuth, getCadeado)

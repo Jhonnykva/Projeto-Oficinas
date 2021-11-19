@@ -130,25 +130,21 @@ void loop()
     Serial.println("Cadeado Desbloqueado");
   else Serial.println("Cadeado bloqueado");
 #endif
-  if (running && !desbloqueado)
-  {
-    bool liberadorStatus = verificarLiberador();
-    if (desbloqueado != liberadorStatus)
-      desbloqueado = liberadorStatus;
-    //    if (!liberadorStatus)
-    //    {
-    //      fecharCadeado();
-    //    }
-    //    else
-    //    {
-    //      abrirCadeado();
-    //    }
+  if (running) {
+    if (desbloqueado) {
+      bloquearCadeado();
+      desbloqueado = isCadeadoDesbloqueado();
+    } else {
+      bool liberadorStatus = verificarLiberador();
+      if (desbloqueado != liberadorStatus)
+        desbloqueado = liberadorStatus;
 #if DEBUG
-    if (liberadorStatus)
-      Serial.println("Cadeado Desbloqueado");
-    else
-      Serial.println("Liberador inválido");
+      if (liberadorStatus)
+        Serial.println("Cadeado Desbloqueado");
+      else
+        Serial.println("Liberador inválido");
 #endif
+    }
   }
 
   if (desbloqueado) {
@@ -489,7 +485,7 @@ void verificarCodConfig()
 }
 
 // Atualizar
-void atualizarParametros(String &res)
+void atualizarParametros(String & res)
 {
   int i = 1;
   authString = "";
@@ -593,7 +589,7 @@ void carregarEEPROM()
 #endif
 }
 
-int captaString(String *nome, int i)
+int captaString(String * nome, int i)
 {
 
   int j = EEPROM.read(i);
@@ -634,7 +630,7 @@ void salvarEEPROM()
   EEPROM.commit();
 }
 
-int salvaInfo(int posicao, String *nome)
+int salvaInfo(int posicao, String * nome)
 {
 
   int i = 0, tam;
@@ -813,6 +809,30 @@ bool enviarEventoCadeadoBateriaBaixa() {
 #endif
 }
 
+void bloquearCadeado()
+{
+  //Mensagem na API: "O cadeado começou a se mover!"
+  HTTPClient http;
+  String serverPath = "http://" + host + ":" + API_PORT + "/api/v1/cadeado/me/bloquear";
+
+  http.begin(serverPath.c_str());
+  http.addHeader("Authorization", "Basic " + authString);
+  int httpResponseCode = http.PUT(String(""));
+  http.end();
+
+#if DEBUG
+  if (httpResponseCode > 0)
+  {
+    Serial.print("HTTP Response code: ");
+    Serial.println(httpResponseCode);
+  }
+  else
+  {
+    Serial.print("Error code: ");
+    Serial.println(httpResponseCode);
+  }
+#endif
+}
 void atualizarValoresMPU()
 {
   // Obtem valores do sensor

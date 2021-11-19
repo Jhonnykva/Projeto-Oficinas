@@ -102,6 +102,24 @@ exports.isDesbloqueado = asyncHandler(async (req, res, next) => {
   res.status(200).json({ estado: cadeado.estado });
 });
 
+// @description   Bloqueia o cadeado
+// @route         POST /cadeado/me/bloquear
+// @access        Privada
+exports.bloquearCadeado = asyncHandler(async (req, res, next) => {
+  const id = req.cadeado ? req.cadeado.id : null;
+  if (typeof id !== 'string')
+    return next(new ErrorResponse('ID inválido', 400));
+
+  let cadeado = await Cadeado.findById(id);
+
+  if (!cadeado)
+    return next(new ErrorResponse(`Cadeado ${id} não encontrado`, 404));
+
+  await Cadeado.findByIdAndUpdate(cadeado._id, { estado: 'Bloqueado' });
+
+  res.status(200).json({ estado: cadeado.estado });
+});
+
 // @description   Desbloqueia o cadeado caso seja fornecido um liberador válido
 // @route         POST /cadeado/me/desbloquear?cod_liberador=
 // @access        Privada
