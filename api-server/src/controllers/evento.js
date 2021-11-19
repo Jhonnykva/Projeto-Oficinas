@@ -61,6 +61,15 @@ exports.registerEventoPredeterminado = asyncHandler(async (req, res, next) => {
 
   let evento = null;
   switch (idTipoEvento) {
+    case '410':
+      evento = await Evento.create({
+        id_usuario: cadeado.id_usuario,
+        id_cadeado: req.cadeado.id,
+        titulo: 'Bateria agotada',
+        info: `O cadeado ${req.cadeado.id} foi desligado, logo de detectar um baixo nível de carga.`,
+        tipo: 'critical',
+      });
+      break;
     // Giroscopio detectou movimento não esperado
     case '404':
       evento = await Evento.create({
