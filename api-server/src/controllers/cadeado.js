@@ -59,7 +59,6 @@ exports.getCadeado = asyncHandler(async (req, res, next) => {
 // @route         POST /cadeado/:id_cadeado
 // @access        Privada
 exports.updateCadeado = asyncHandler(async (req, res, next) => {
-  console.log(req.body);
   const id = req.params.id_cadeado;
   if (typeof id !== 'string')
     return next(new ErrorResponse('ID inválido', 400));
@@ -96,6 +95,9 @@ exports.isDesbloqueado = asyncHandler(async (req, res, next) => {
 
   if (String(cadeado.estado).toLowerCase() !== 'desbloqueado')
     return next(new ErrorResponse(`Cadeado ${id} não desbloqueado`, 400));
+
+  if (!cadeado.associado)
+    await Cadeado.findByIdAndUpdate(cadeado._id, { associado: true });
 
   res.status(200).json({ estado: cadeado.estado });
 });
@@ -201,10 +203,12 @@ exports.getcadeadoConfigQR = asyncHandler(async (req, res, next) => {
     `${cadeado.public_key}:${cadeado.private_key}`
   ).toString('base64');
 
-  const qr = await QrCode.toDataURL(
-    `${token}\n${req.body.ssid}\n${req.body.pass}\n`,
-    { errorCorrectionLevel: 'H', width: 500 }
-  );
+  const ssid = process.env.DEFAULT_WIFI_SSID | 'Test'; // req.body.ssid
+  const pass = process.env.DEFAULT_WIFI_PASS | 'test123456'; // req.body.pass
+  const qr = await QrCode.toDataURL(`${token}\n${ssid}\n${pass}\n`, {
+    errorCorrectionLevel: 'H',
+    width: 500,
+  });
   res.status(200).json({ data: qr });
 });
 
@@ -213,7 +217,6 @@ exports.getcadeadoConfigQR = asyncHandler(async (req, res, next) => {
 // @access        Privada
 exports.checkQrCode = asyncHandler(async (req, res, next) => {
   const id = req.cadeado.id;
-  // console.log(id);
   if (!id) return next(new ErrorResponse('Não autorizado', 401));
 
   var qrI = new QrCodeReader();
@@ -231,8 +234,6 @@ exports.checkQrCode = asyncHandler(async (req, res, next) => {
         // TODO handle error
         return next(new ErrorResponse('Código inválido', 400));
       }
-      console.log(value.result);
-      console.log(value);
       const cod_liberador = value.result;
       const liberador = await Liberador.findOne({
         cod_liberador,

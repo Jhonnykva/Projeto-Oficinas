@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 
@@ -28,33 +28,48 @@ const CadeadoConfigQr = ({ loading, getCadeadoConfigQrCode }) => {
     }
   };
 
+  useEffect(() => {
+    updateSrc();
+    // eslint-disable-next-line
+  }, []);
+
   const itemStyle = { marginTop: '0.25rem' };
   return (
     <Box display="flex" alignItems="center" flexWrap="wrap">
       {imgSrc ? <img src={imgSrc} alt="" /> : <React.Fragment />}
       <Box display="flex" flexDirection="column" flexGrow={1}>
-        <TextField
-          name="ssid"
-          label="SSID WiFi"
-          variant="outlined"
-          size="small"
-          value={info.ssid}
-          onChange={handleOnChange}
-          style={itemStyle}
-        />
-        <TextField
-          name="pass"
-          label="Senha"
-          type="password"
-          variant="outlined"
-          size="small"
-          value={info.pass}
-          onChange={handleOnChange}
-          style={itemStyle}
-        />
-        <Button onClick={handleOnClick} disabled={loading} style={itemStyle}>
-          Obter código
-        </Button>
+        {imgSrc === null ? (
+          <React.Fragment>
+            <TextField
+              name="ssid"
+              label="SSID WiFi"
+              variant="outlined"
+              size="small"
+              value={info.ssid}
+              onChange={handleOnChange}
+              style={itemStyle}
+            />
+            <TextField
+              name="pass"
+              label="Senha"
+              type="password"
+              variant="outlined"
+              size="small"
+              value={info.pass}
+              onChange={handleOnChange}
+              style={itemStyle}
+            />
+            <Button
+              onClick={handleOnClick}
+              disabled={loading}
+              style={itemStyle}
+            >
+              Obter código
+            </Button>
+          </React.Fragment>
+        ) : (
+          <React.Fragment />
+        )}
       </Box>
     </Box>
   );

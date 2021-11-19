@@ -1,5 +1,5 @@
 const getDefaultServerHost = () => {
-  return process.env.REACT_APP_SERVER_HOST || 'http://localhost:5000/api/v1';
+  return process.env.REACT_APP_SERVER_HOST || 'http://localhost:5055/api/v1';
 };
 
 const getAppBase = () => {

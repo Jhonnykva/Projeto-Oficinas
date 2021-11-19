@@ -7,6 +7,9 @@ import EventoListItem from './EventoListItem';
 const EventoList = ({ eventos, showCadeadoLink, ...props }) => {
   if (!eventos || eventos.length <= 0)
     return <EmptyIndicator label="Sem eventos" />;
+  if (eventos.length > 50) {
+    eventos = eventos.slice(0, 50);
+  }
   return (
     <Box display="flex" flexDirection="column" {...props}>
       {eventos.map((evento) => (
