@@ -1,15 +1,23 @@
 
+#include <EEPROM.h>
+#include <Servo.h>
 #include <WiFi.h>
-#include "Adafruit_MPU6050.h"
 #include <Wire.h>
+
 #include <HTTPClient.h>
+#include "Adafruit_MPU6050.h"
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 #include "esp_camera.h"
-#include <EEPROM.h>
-#include <Servo.h>
 
 #define EEPROM_LENGTH 1024
+
+// Controle de tensão da bateria
+#define CHECK_BATTERY 1
+#define BAT_CHECK_PIN 33
+#define BAT_CHECK_N_SAMPLES 30
+#define BAT_CHECK_CAL 0.00477401
+#define MIN_VOLTAGE 7.2
 
 // Definições de pinos internos
 #define DEBUG 1
@@ -29,6 +37,10 @@
 #define VSYNC_GPIO_NUM 25
 #define HREF_GPIO_NUM 23
 #define PCLK_GPIO_NUM 22
+
+// Control Button
+#define BTN_PIN 12
+bool btnStatus = false;
 
 // Pinos I2C
 #define I2C_SDA 15
@@ -50,15 +62,15 @@ int contagemNotificacaoMPU = 0;
 float ax = -1, ay = -1, az = -1, gx = -1, gy = -1, gz = -1;
 sensors_event_t a, g, temp;
 
-
 // Parametros servidor
-String host = "10.255.0.219";
-String authString = "ZjkwZjo2YTY0";
+String host = "10.255.0.254";
+String authString = "--`";
 WiFiClient client;
 
 // Parametros WiFi
 String ssid = "--";
 String pass = "--";
+
 void setup()
 {
   // Inicia EEPROM
@@ -80,60 +92,79 @@ void setup()
     Serial.println("Giroscopio iniciado!");
 
   //Configuração do Servo-Motor
-  servo.attach(PIN_SERVO);
+  servo.attach(PIN_SERVO, 2);
 
   // Carrega parametros desde EEPROM
   carregarEEPROM();
   iniciaCamera();
+
+  // Configura Interrupt do botao
+  initBtnControl();
+
   //Ajusta todas as configurações iniciais para o Wifi
   setupWifi();
+
   // Verifica se não existe um cod de configuração
-  delay(1000);
-  verificarCodConfig();
+  checkForConfigUpdate();
 }
 
+void checkBatteryStatus(bool);
 bool desbloqueado = false;
 void loop()
 {
   /* Pega a imagem da camera e envia para o servidor
       para verificar se existe um liberador na imagem
   */
-  desbloqueado = isCadeadoDesbloqueado();
+  bool running = digitalRead(BTN_PIN) == HIGH;
+  if (!running) {
 #if DEBUG
-  if (desbloqueado) {
+    Serial.println("NOT RUNNING");
+#endif
+    //delay(250);
+    //return;
+  }
+  if (running)
+    desbloqueado = isCadeadoDesbloqueado();
+#if DEBUG
+  if (desbloqueado)
     Serial.println("Cadeado Desbloqueado");
-  } else {
-    Serial.println("Cadeado bloqueado");
-  }
+  else Serial.println("Cadeado bloqueado");
 #endif
-  if (!desbloqueado) {
+  if (running && !desbloqueado)
+  {
     bool liberadorStatus = verificarLiberador();
-    if (!liberadorStatus) {
-      fecharCadeado();
-      // Verifica movimento caso o cadeado esteja bloqueado
-      executarMPU();
-    } else {
-      abrirCadeado();
-    }
+    if (desbloqueado != liberadorStatus)
+      desbloqueado = liberadorStatus;
+    //    if (!liberadorStatus)
+    //    {
+    //      fecharCadeado();
+    //    }
+    //    else
+    //    {
+    //      abrirCadeado();
+    //    }
 #if DEBUG
-    if (liberadorStatus) {
+    if (liberadorStatus)
       Serial.println("Cadeado Desbloqueado");
-    } else {
+    else
       Serial.println("Liberador inválido");
-    }
 #endif
-  } else {
-    abrirCadeado();
   }
-  delay(500);
-  //  sleep(10);
-  //  envioAPI();
 
-  // COMENTADO PARA TESTES
-  //  if(permissaoCadeado()==true)
-  //    abrirCadeado();
-  //  else if(permissaoCadeado()==false)
-  //    fecharCadeado();
+  if (desbloqueado) {
+    abrirCadeado();
+  } else {
+    fecharCadeado();
+  }
+
+  if (!desbloqueado) {
+    // Verifica movimento caso o cadeado esteja bloqueado
+    executarMPU();
+  }
+  checkBatteryStatus(false);
+  if (!running) {
+    delay(500);
+  }
 }
 
 void setupWifi()
@@ -147,7 +178,7 @@ void setupWifi()
   {
     Serial.print('.');
     delay(1000);
-//    timeWaited += 1000;
+    //    timeWaited += 1000;
   }
   Serial.println(WiFi.localIP());
 }
@@ -155,7 +186,8 @@ void setupWifi()
 //Funções para abrir ou fechar cadeado de acordo com a permissão do sistema
 void abrirCadeado()
 {
-  if (pos != 180) {
+  if (pos != 180)
+  {
     pos = 180;
     servo.write(pos);
   }
@@ -163,17 +195,19 @@ void abrirCadeado()
 
 void fecharCadeado()
 {
-  if (pos != 0) {
+  if (pos != 0)
+  {
     pos = 0;
     servo.write(0);
   }
 }
 
 /**
-  @Desc: Verifica se o cadeado está desbloqueado no servidor
-  @Retorno: True -> Desbloqueado | False -> Bloquerado
+  @Desc: Envia evento de movimento inesperado
+  @Retorno: True -> OK | False -> Error ao enviar
 **/
-bool enviarEventoMovimentosCadeado() {
+bool enviarEventoMovimentosCadeado()
+{
   HTTPClient http;
   int COD_EVENTO = 401; // Código do evento
   String serverPath = "http://" + host + ":" + API_PORT + "/api/v1/evento/p/" + COD_EVENTO;
@@ -184,10 +218,13 @@ bool enviarEventoMovimentosCadeado() {
   http.end();
 
 #if DEBUG
-  if (httpResponseCode > 0) {
+  if (httpResponseCode > 0)
+  {
     Serial.print("HTTP Response code: ");
     Serial.println(httpResponseCode);
-  } else {
+  }
+  else
+  {
     Serial.print("Error code: ");
     Serial.println(httpResponseCode);
   }
@@ -198,10 +235,11 @@ bool enviarEventoMovimentosCadeado() {
   @Desc: Verifica se o cadeado está desbloqueado no servidor
   @Retorno: True -> Desbloqueado | False -> Bloquerado
 **/
-bool isCadeadoDesbloqueado() {
+bool isCadeadoDesbloqueado()
+{
   bool status = false;
   HTTPClient http;
-  
+
   String serverPath = "http://" + host + ":" + API_PORT + "/api/v1/cadeado/me/desbloqueado";
 
   http.begin(serverPath.c_str());
@@ -210,14 +248,16 @@ bool isCadeadoDesbloqueado() {
   int httpResponseCode = http.GET();
   http.end();
 
-  if (httpResponseCode > 0) {
+  if (httpResponseCode > 0)
+  {
 #if DEBUG
     Serial.print("HTTP Response code: ");
     Serial.println(httpResponseCode);
 #endif
     status = httpResponseCode == 200;
   }
-  else {
+  else
+  {
 #if DEBUG
     Serial.print("Error code: ");
     Serial.println(httpResponseCode);
@@ -233,6 +273,8 @@ bool isCadeadoDesbloqueado() {
   existe na imagem.
   @Retorno: True -> Liberador válido | False -> Liberador inválido ou não existente
 **/
+// Ref1: https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/POST
+// Ref2: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
 bool verificarLiberador()
 {
   String res;
@@ -304,7 +346,8 @@ bool verificarLiberador()
         //        Serial.print(c);
         if (c == '\n')
         {
-          if (isDigit(res.charAt(9)) && isDigit(res.charAt(10)) && isDigit(res.charAt(11))) {
+          if (isDigit(res.charAt(9)) && isDigit(res.charAt(10)) && isDigit(res.charAt(11)))
+          {
             res = res.substring(9, 12);
             state = true;
             break;
@@ -322,7 +365,9 @@ bool verificarLiberador()
 #endif
     client.stop();
     return res.charAt(0) == '2' && res.charAt(1) == '0';
-  } else {
+  }
+  else
+  {
 #if DEBUG
     Serial.println("Connection to " + host + " failed.");
 #endif
@@ -334,7 +379,8 @@ bool verificarLiberador()
 /**
   @Desc: Captura uma imagem e envia para o servidor para buscar um código de configuração válido
 **/
-void verificarCodConfig() {
+void verificarCodConfig()
+{
   String res = "", aux = "";
   camera_fb_t *fb = NULL;
   fb = esp_camera_fb_get();
@@ -398,23 +444,29 @@ void verificarCodConfig() {
       Serial.print(".");
 #endif
       delay(100);
-      while (client.available()) {
+      while (client.available())
+      {
         char c = client.read();
-        if (c == '\n') {
-          if (aux.length() == 0) {
+        if (c == '\n')
+        {
+          if (aux.length() == 0)
+          {
             state = true;
           }
           aux = "";
         }
-        else if (c != '\r') {
+        else if (c != '\r')
+        {
           aux += String(c);
         }
-        if (state == true) {
+        if (state == true)
+        {
           res += String(c);
         }
         startTimer = millis();
       }
-      if (res.length() > 0) {
+      if (res.length() > 0)
+      {
         break;
       }
     }
@@ -423,10 +475,13 @@ void verificarCodConfig() {
     Serial.println(res);
 #endif
     client.stop();
-    if (res.charAt(1) != '{'){
+    if (res.charAt(1) != '{')
+    {
       atualizarParametros(res);
     }
-  } else {
+  }
+  else
+  {
 #if DEBUG
     Serial.println("Conexão a " + host + " falida.");
 #endif
@@ -434,29 +489,35 @@ void verificarCodConfig() {
 }
 
 // Atualizar
-void atualizarParametros(String& res) {
+void atualizarParametros(String &res)
+{
   int i = 1;
   authString = "";
-  while (res.charAt(i) != '\n') {
+  while (res.charAt(i) != '\n')
+  {
     authString += res.charAt(i);
     i++;
   }
   i++;
   ssid = "";
-  while (res.charAt(i) != '\n') {
+  while (res.charAt(i) != '\n')
+  {
     ssid += res.charAt(i);
     i++;
   }
   i++;
   pass = "";
-  while (res.charAt(i) != '\n') {
+  while (res.charAt(i) != '\n')
+  {
     pass += res.charAt(i);
     i++;
   }
   salvarEEPROM();
 }
 
-void iniciaCamera() {
+// https://randomnerdtutorials.com/esp32-cam-take-photo-display-web-server/
+void iniciaCamera()
+{
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
@@ -481,29 +542,30 @@ void iniciaCamera() {
 
   // Define qualidade da imagen
   config.frame_size = FRAMESIZE_SVGA;
-  config.jpeg_quality = 10;  //0-63 lower number means higher quality
+  config.jpeg_quality = 10; //0-63 lower number means higher quality
   config.fb_count = 2;
-
 
   // camera init
   esp_err_t err = esp_camera_init(&config);
-  if (err != ESP_OK) {
-    #if DEBUG
+  if (err != ESP_OK)
+  {
+#if DEBUG
     Serial.printf("Erro ao iniciar a camera: 0x%x", err);
-    #endif
+#endif
     delay(1000);
     ESP.restart();
   }
 }
 
-
-void carregarEEPROM() {
+void carregarEEPROM()
+{
   int i = 0;
 
-  char by =  EEPROM.read(i++);
+  char by = EEPROM.read(i++);
   bool eepromValid = by == 'T';
 
-  if (eepromValid) {
+  if (eepromValid)
+  {
     host = "";
     authString = "";
     ssid = "";
@@ -514,12 +576,13 @@ void carregarEEPROM() {
     i = captaString(&pass, i);
   }
 
-  ssid = "GV_K";
-  pass = "ckd5998506";
 #if DEBUG
-  if (eepromValid) {
+  if (eepromValid)
+  {
     Serial.println("#### Carregado desde EEPROM ####");
-  } else {
+  }
+  else
+  {
     Serial.println("#### EEPROM  inválido ####");
   }
   Serial.println("Host: " + host);
@@ -530,11 +593,13 @@ void carregarEEPROM() {
 #endif
 }
 
-int captaString(String *nome, int i) {
+int captaString(String *nome, int i)
+{
 
   int j = EEPROM.read(i);
   char c = j;
-  while (c != '\n') {
+  while (c != '\n')
+  {
     (*nome).concat(c);
     i++;
     j = EEPROM.read(i);
@@ -547,7 +612,8 @@ int captaString(String *nome, int i) {
   return (i + 1);
 }
 
-void salvarEEPROM() {
+void salvarEEPROM()
+{
 
 #if DEBUG
   Serial.println("#### Salvando em EEPROM ####");
@@ -566,42 +632,45 @@ void salvarEEPROM() {
   i = salvaInfo(i, &pass);
 
   EEPROM.commit();
-
 }
 
-int salvaInfo(int posicao, String* nome) {
+int salvaInfo(int posicao, String *nome)
+{
 
   int i = 0, tam;
   tam = (*nome).length();
-  for (i; i < tam; i++) {
+  for (i; i < tam; i++)
+  {
     EEPROM.write(posicao, (*nome)[i]);
     posicao++;
   }
 
   posicao = posicao + 1;
-  EEPROM.write(posicao , '\n');
+  EEPROM.write(posicao, '\n');
   posicao = posicao + 1;
 
   return posicao;
 }
 
-
 int statusMovimento = 0;
 
-void executarMPU() {
+void executarMPU()
+{
 #if DEBUG
   Serial.println("Verificando dados MPU");
 #endif
   // Obtem novos valores do sensor
   atualizarValoresMPU();
   bool movendo = cadeadoMovendo() || cadeadoGirando();
-  if (movendo && statusMovimento == 0) {
+  if (movendo && statusMovimento == 0)
+  {
     //Notifica o sistema que o cadeado começou a se mover
     statusMovimento = 1;
     enviarEventoCadeadoMovendo();
     enviarEventoCadeadoViolado();
   }
-  if (!movendo && statusMovimento == 1) {
+  if (!movendo && statusMovimento == 1)
+  {
     //Notifica o sistema que o cadeado parou de se mover
     statusMovimento = 0;
     enviarEventoCadeadoParado();
@@ -614,11 +683,10 @@ void executarMPU() {
   //      contagemNotificacaoMPU = 0;
   //    }
   //  }
-
 }
 
-
-bool enviarEventoCadeadoMovendo() {
+bool enviarEventoCadeadoMovendo()
+{
   //Mensagem na API: "O cadeado começou a se mover!"
   HTTPClient http;
   int COD_EVENTO = 401; // Código do evento registrado
@@ -630,17 +698,21 @@ bool enviarEventoCadeadoMovendo() {
   http.end();
 
 #if DEBUG
-  if (httpResponseCode > 0) {
+  if (httpResponseCode > 0)
+  {
     Serial.print("HTTP Response code: ");
     Serial.println(httpResponseCode);
-  } else {
+  }
+  else
+  {
     Serial.print("Error code: ");
     Serial.println(httpResponseCode);
   }
 #endif
 }
 
-bool enviarEventoCadeadoParado() {
+bool enviarEventoCadeadoParado()
+{
   //Mensagem na API: "O cadeado parou de se mover!"
   HTTPClient http;
   int COD_EVENTO = 402; // Código do evento registrado
@@ -652,17 +724,21 @@ bool enviarEventoCadeadoParado() {
   http.end();
 
 #if DEBUG
-  if (httpResponseCode > 0) {
+  if (httpResponseCode > 0)
+  {
     Serial.print("HTTP Response code: ");
     Serial.println(httpResponseCode);
-  } else {
+  }
+  else
+  {
     Serial.print("Error code: ");
     Serial.println(httpResponseCode);
   }
 #endif
 }
 
-bool enviarEventoCadeadoContinuaMovimento() {
+bool enviarEventoCadeadoContinuaMovimento()
+{
   //Mensagem na API: "O cadeado continua a se mover!"
   HTTPClient http;
   int COD_EVENTO = 403; // Código do evento registrado
@@ -674,17 +750,21 @@ bool enviarEventoCadeadoContinuaMovimento() {
   http.end();
 
 #if DEBUG
-  if (httpResponseCode > 0) {
+  if (httpResponseCode > 0)
+  {
     Serial.print("HTTP Response code: ");
     Serial.println(httpResponseCode);
-  } else {
+  }
+  else
+  {
     Serial.print("Error code: ");
     Serial.println(httpResponseCode);
   }
 #endif
 }
 
-bool enviarEventoCadeadoViolado() {
+bool enviarEventoCadeadoViolado()
+{
   //Mensagem na API: "Alguém sem autorização está mechendo no cadeado!"
   HTTPClient http;
   int COD_EVENTO = 404; // Código do evento registrado
@@ -696,29 +776,60 @@ bool enviarEventoCadeadoViolado() {
   http.end();
 
 #if DEBUG
-  if (httpResponseCode > 0) {
+  if (httpResponseCode > 0)
+  {
     Serial.print("HTTP Response code: ");
     Serial.println(httpResponseCode);
-  } else {
+  }
+  else
+  {
     Serial.print("Error code: ");
     Serial.println(httpResponseCode);
   }
 #endif
 }
 
-void atualizarValoresMPU() {
+bool enviarEventoCadeadoBateriaBaixa() {
+  HTTPClient http;
+  int COD_EVENTO = 410; // Código do evento registrado
+  String serverPath = "http://" + host + ":" + API_PORT + "/api/v1/evento/p/" + COD_EVENTO;
+
+  http.begin(serverPath.c_str());
+  http.addHeader("Authorization", "Basic " + authString);
+  int httpResponseCode = http.POST(String(""));
+  http.end();
+
+#if DEBUG
+  if (httpResponseCode > 0)
+  {
+    Serial.print("HTTP Response code: ");
+    Serial.println(httpResponseCode);
+  }
+  else
+  {
+    Serial.print("Error code: ");
+    Serial.println(httpResponseCode);
+  }
+#endif
+}
+
+void atualizarValoresMPU()
+{
   // Obtem valores do sensor
   mpu.getEvent(&a, &g, &temp);
 
   // Valores < 0, primeira leitura
-  if (ax < 0) {
+  if (ax < 0)
+  {
     ax = abs(a.acceleration.x);
     ay = abs(a.acceleration.y);
     az = abs(a.acceleration.z);
     gx = abs(g.gyro.x);
     gy = abs(g.gyro.y);
     gz = abs(g.gyro.z);
-  } else { // Valores >= 0, leituras consecutivas
+  }
+  else
+  { // Valores >= 0, leituras consecutivas
     // Tomamos a media com o valor de aceleracao atual como referência
     ax = (ax + abs(a.acceleration.x)) / 2;
     ay = (ay + abs(a.acceleration.y)) / 2;
@@ -729,33 +840,38 @@ void atualizarValoresMPU() {
   }
 }
 
-bool cadeadoMovendo() {
+bool cadeadoMovendo()
+{
 
   // A variável error é utilizada para evitar a deteção de flutuações
   // Talvez seja necessário mudar o valor dela dependendo dos testes
   float error = 0.05;
-#if DEBUG
+#if 0 && DEBUG
   Serial.println(" A  " + String(a.acceleration.x) + " " + String(a.acceleration.y) + " " + String(a.acceleration.z));
   Serial.println("<A> " + String(ax) + " " + String(ay) + " " + String(az));
   Serial.println("%A  " + String(pow(ax - abs(a.acceleration.x), 2) / ax) + " " + String(pow(ay - abs(a.acceleration.y), 2) / ay) + " " + String(pow(az - abs(a.acceleration.z), 2) / az));
 #endif
 
-  if (ax != 0 && pow(ax - abs(a.acceleration.x), 2) / ax > error) {
+  if (ax != 0 && pow(ax - abs(a.acceleration.x), 2) / ax > error)
+  {
     return true;
   }
-  else if (ay != 0 && pow(ay - abs(a.acceleration.y), 2) / ay > error) {
+  else if (ay != 0 && pow(ay - abs(a.acceleration.y), 2) / ay > error)
+  {
     return true;
   }
-  else if (az != 0 && pow(az - abs(a.acceleration.z), 2) / az > error) {
+  else if (az != 0 && pow(az - abs(a.acceleration.z), 2) / az > error)
+  {
     return true;
   }
 
   return false;
 }
 
-bool cadeadoGirando() {
+bool cadeadoGirando()
+{
 
-#if DEBUG
+#if 0 && DEBUG
   Serial.println(" G  " + String(g.gyro.x) + " " + String(g.gyro.y) + " " + String(g.gyro.z));
   Serial.println("<G> " + String(gx) + " " + String(gy) + " " + String(gz));
   Serial.println("%G  " + String(pow(gx - abs(g.gyro.x), 2) / gx) + " " + String(pow(gy - abs(g.gyro.y), 2) / gy) + " " + String(pow(gz - abs(g.gyro.z), 2) / gz));
@@ -765,15 +881,84 @@ bool cadeadoGirando() {
   // Talvez seja necessário mudar o valor dela dependendo dos testes
   float error = 0.05;
 
-  if (gx != 0 && pow(gx - abs(g.gyro.x), 2) / gx > error) {
+  if (gx != 0 && pow(gx - abs(g.gyro.x), 2) / gx > error)
+  {
     return true;
   }
-  else if (gy != 0 && pow(gy - abs(g.gyro.y), 2) / gy > error) {
+  else if (gy != 0 && pow(gy - abs(g.gyro.y), 2) / gy > error)
+  {
     return true;
   }
-  else if (gz != 0 && pow(gz - abs(g.gyro.z), 2) / gz > error) {
+  else if (gz != 0 && pow(gz - abs(g.gyro.z), 2) / gz > error)
+  {
     return true;
   }
 
   return false;
+}
+
+// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/gpio.html
+// https://github.com/espressif/esp-who/issues/90
+void initBtnControl() {
+  //  pinMode(BTN_PIN, INPUT);
+
+  pinMode(BTN_PIN, OUTPUT);
+}
+void checkBatteryStatus(bool second = false) {
+  if (!CHECK_BATTERY) return;
+
+  float voltage = getBatteryVoltage(second ? BAT_CHECK_N_SAMPLES * 2 : BAT_CHECK_N_SAMPLES);
+#if DEBUG
+  Serial.printf("Battery Voltage: %0.3f\n", voltage);
+#endif
+  if (voltage < MIN_VOLTAGE) {
+    if (second) {
+      enviarEventoCadeadoBateriaBaixa();
+      dormirESP();
+    } else {
+      delay(100);
+      checkBatteryStatus(true);
+    }
+  }
+
+
+}
+int oldVoltage = 0;
+float getBatteryVoltage(int nSamples) {
+  int voltage = 0;
+  for (int i = 0; i < nSamples; i++) {
+    voltage += analogRead(BAT_CHECK_PIN);
+    delay(5);
+  }
+  voltage = voltage / nSamples;
+  if (oldVoltage > 0) {
+    oldVoltage = voltage;
+  } else {
+    oldVoltage = oldVoltage * 0.2 + voltage * 0.8;
+  }
+  return BAT_CHECK_CAL * oldVoltage;
+}
+
+
+void dormirESP() {
+#if DEBUG
+  Serial.println("Entrando em modo deep sleep");
+#endif
+  esp_deep_sleep_start();
+}
+
+void checkForConfigUpdate() {
+  delay(1000);
+  if (digitalRead(BTN_PIN) == HIGH)
+  {
+
+    while (1)
+    {
+#if DEBUG
+      Serial.println("Verificando cod config");
+#endif
+      verificarCodConfig();
+      delay(250);
+    }
+  }
 }
