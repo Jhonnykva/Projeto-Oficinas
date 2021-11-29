@@ -1,4 +1,3 @@
-
 #include <EEPROM.h>
 #include <Servo.h>
 #include <WiFi.h>
@@ -13,7 +12,7 @@
 #define EEPROM_LENGTH 1024
 
 // Controle de tensão da bateria
-#define CHECK_BATTERY 1
+#define CHECK_BATTERY 0
 #define BAT_CHECK_PIN 33
 #define BAT_CHECK_N_SAMPLES 30
 #define BAT_CHECK_CAL 0.00477401
@@ -21,22 +20,9 @@
 
 // Definições de pinos internos
 #define DEBUG 1
-#define PWDN_GPIO_NUM 32
-#define RESET_GPIO_NUM -1
-#define XCLK_GPIO_NUM 0
-#define SIOD_GPIO_NUM 26
-#define SIOC_GPIO_NUM 27
-#define Y9_GPIO_NUM 35
-#define Y8_GPIO_NUM 34
-#define Y7_GPIO_NUM 39
-#define Y6_GPIO_NUM 36
-#define Y5_GPIO_NUM 21
-#define Y4_GPIO_NUM 19
-#define Y3_GPIO_NUM 18
-#define Y2_GPIO_NUM 5
-#define VSYNC_GPIO_NUM 25
-#define HREF_GPIO_NUM 23
-#define PCLK_GPIO_NUM 22
+
+#define CAMERA_MODEL_AI_THINKER
+#include "camera_pins.h"
 
 // Control Button
 #define BTN_PIN 12
@@ -51,8 +37,10 @@ bool btnStatus = false;
 
 // Controle servo
 #define PIN_SERVO 13
+#define CLOSE_POS 0
+#define OPEN_POS 90
 Servo servo;
-int pos = 0;
+int pos = -1;
 
 // Controle Giroscópio
 const int MPU_ADDRESS = 0x68; // MPU6050 I2C address
@@ -80,6 +68,9 @@ void setup()
   delay(100);
   Serial.println("Serial iniciado!");
 
+  // Inicia camera
+  iniciaCamera();
+
   // Inicializa I2C
   I2CMPU.begin(I2C_SDA, I2C_SCL, 100000);
 
@@ -96,7 +87,6 @@ void setup()
 
   // Carrega parametros desde EEPROM
   carregarEEPROM();
-  iniciaCamera();
 
   // Configura Interrupt do botao
   initBtnControl();
@@ -116,25 +106,35 @@ void loop()
       para verificar se existe um liberador na imagem
   */
   bool running = digitalRead(BTN_PIN) == HIGH;
-  if (!running) {
+  if (!running)
+  {
 #if DEBUG
     Serial.println("NOT RUNNING");
 #endif
     //delay(250);
     //return;
   }
-  if (running)
-    desbloqueado = isCadeadoDesbloqueado();
+  //if (running)
+  desbloqueado = isCadeadoDesbloqueado();
 #if DEBUG
   if (desbloqueado)
     Serial.println("Cadeado Desbloqueado");
-  else Serial.println("Cadeado bloqueado");
+  else
+    Serial.println("Cadeado bloqueado");
 #endif
-  if (running) {
-    if (desbloqueado) {
-      bloquearCadeado();
-      desbloqueado = isCadeadoDesbloqueado();
-    } else {
+  if (running)
+  {
+    if (desbloqueado)
+    {
+      delay(500);
+      if (digitalRead(BTN_PIN) == HIGH)
+      {
+        bloquearCadeado();
+        desbloqueado = isCadeadoDesbloqueado();
+      }
+    }
+    else
+    {
       bool liberadorStatus = verificarLiberador();
       if (desbloqueado != liberadorStatus)
         desbloqueado = liberadorStatus;
@@ -147,26 +147,31 @@ void loop()
     }
   }
 
-  if (desbloqueado) {
+  if (desbloqueado)
+  {
     abrirCadeado();
-  } else {
+  }
+  else
+  {
     fecharCadeado();
   }
 
-  if (!desbloqueado) {
+  if (!desbloqueado)
+  {
     // Verifica movimento caso o cadeado esteja bloqueado
     executarMPU();
   }
   checkBatteryStatus(false);
-  if (!running) {
-    delay(500);
+  if (!running)
+  {
+    delay(250);
   }
 }
 
 void setupWifi()
 {
   WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid.c_str(), pass.c_str());
+  WiFi.begin("GV_K","ckd5998506");//ssid.c_str(), pass.c_str());
   Serial.print("Connecting to WiFi ..");
   int cwi = 0;
   unsigned int timeWaited = 0;
@@ -174,7 +179,7 @@ void setupWifi()
   {
     Serial.print('.');
     delay(1000);
-    //    timeWaited += 1000;
+    timeWaited += 1000;
   }
   Serial.println(WiFi.localIP());
 }
@@ -182,19 +187,19 @@ void setupWifi()
 //Funções para abrir ou fechar cadeado de acordo com a permissão do sistema
 void abrirCadeado()
 {
-  if (pos != 180)
+  if (pos != OPEN_POS)
   {
-    pos = 180;
+    pos = OPEN_POS;
     servo.write(pos);
   }
 }
 
 void fecharCadeado()
 {
-  if (pos != 0)
+  if (pos != CLOSE_POS)
   {
-    pos = 0;
-    servo.write(0);
+    pos = CLOSE_POS;
+    servo.write(CLOSE_POS);
   }
 }
 
@@ -385,8 +390,9 @@ void verificarCodConfig()
 #if DEBUG
     Serial.println("Erro ao obter imagem da camera");
 #endif
-    delay(1000);
-    ESP.restart();
+    delay(500);
+    //return;
+    //ESP.restart();
   }
 #if DEBUG
   Serial.println("Conectando ao servidor: " + host);
@@ -473,6 +479,7 @@ void verificarCodConfig()
     client.stop();
     if (res.charAt(1) != '{')
     {
+      abrirCadeado();
       atualizarParametros(res);
     }
   }
@@ -485,7 +492,7 @@ void verificarCodConfig()
 }
 
 // Atualizar
-void atualizarParametros(String & res)
+void atualizarParametros(String &res)
 {
   int i = 1;
   authString = "";
@@ -509,6 +516,7 @@ void atualizarParametros(String & res)
     i++;
   }
   salvarEEPROM();
+  ESP.restart();
 }
 
 // https://randomnerdtutorials.com/esp32-cam-take-photo-display-web-server/
@@ -536,10 +544,20 @@ void iniciaCamera()
   config.xclk_freq_hz = 20000000;
   config.pixel_format = PIXFORMAT_JPEG;
 
-  // Define qualidade da imagen
-  config.frame_size = FRAMESIZE_SVGA;
-  config.jpeg_quality = 10; //0-63 lower number means higher quality
-  config.fb_count = 2;
+  // if PSRAM IC present, init with UXGA resolution and higher JPEG quality
+  //                      for larger pre-allocated frame buffer.
+  if (psramFound())
+  {
+    config.frame_size = FRAMESIZE_UXGA;
+    config.jpeg_quality = 10;
+    config.fb_count = 2;
+  }
+  else
+  {
+    config.frame_size = FRAMESIZE_SVGA;
+    config.jpeg_quality = 12;
+    config.fb_count = 1;
+  }
 
   // camera init
   esp_err_t err = esp_camera_init(&config);
@@ -551,6 +569,17 @@ void iniciaCamera()
     delay(1000);
     ESP.restart();
   }
+
+  sensor_t *s = esp_camera_sensor_get();
+  // initial sensors are flipped vertically and colors are a bit saturated
+  if (s->id.PID == OV3660_PID)
+  {
+    s->set_vflip(s, 1);       // flip it back
+    s->set_brightness(s, 1);  // up the brightness just a bit
+    s->set_saturation(s, -2); // lower the saturation
+  }
+  // drop down frame size for higher initial frame rate
+  s->set_framesize(s, FRAMESIZE_QVGA);
 }
 
 void carregarEEPROM()
@@ -589,7 +618,7 @@ void carregarEEPROM()
 #endif
 }
 
-int captaString(String * nome, int i)
+int captaString(String *nome, int i)
 {
 
   int j = EEPROM.read(i);
@@ -630,7 +659,7 @@ void salvarEEPROM()
   EEPROM.commit();
 }
 
-int salvaInfo(int posicao, String * nome)
+int salvaInfo(int posicao, String *nome)
 {
 
   int i = 0, tam;
@@ -785,7 +814,8 @@ bool enviarEventoCadeadoViolado()
 #endif
 }
 
-bool enviarEventoCadeadoBateriaBaixa() {
+bool enviarEventoCadeadoBateriaBaixa()
+{
   HTTPClient http;
   int COD_EVENTO = 410; // Código do evento registrado
   String serverPath = "http://" + host + ":" + API_PORT + "/api/v1/evento/p/" + COD_EVENTO;
@@ -865,7 +895,7 @@ bool cadeadoMovendo()
 
   // A variável error é utilizada para evitar a deteção de flutuações
   // Talvez seja necessário mudar o valor dela dependendo dos testes
-  float error = 0.05;
+  float error = 0.1;
 #if 0 && DEBUG
   Serial.println(" A  " + String(a.acceleration.x) + " " + String(a.acceleration.y) + " " + String(a.acceleration.z));
   Serial.println("<A> " + String(ax) + " " + String(ay) + " " + String(az));
@@ -899,7 +929,7 @@ bool cadeadoGirando()
 
   // A variável error é utilizada para evitar a deteção de flutuações
   // Talvez seja necessário mudar o valor dela dependendo dos testes
-  float error = 0.05;
+  float error = 0.1;
 
   if (gx != 0 && pow(gx - abs(g.gyro.x), 2) / gx > error)
   {
@@ -919,59 +949,74 @@ bool cadeadoGirando()
 
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/gpio.html
 // https://github.com/espressif/esp-who/issues/90
-void initBtnControl() {
+void initBtnControl()
+{
   //  pinMode(BTN_PIN, INPUT);
 
   pinMode(BTN_PIN, OUTPUT);
 }
-void checkBatteryStatus(bool second = false) {
-  if (!CHECK_BATTERY) return;
+void checkBatteryStatus(bool second = false)
+{
+  if (!CHECK_BATTERY)
+    return;
 
   float voltage = getBatteryVoltage(second ? BAT_CHECK_N_SAMPLES * 2 : BAT_CHECK_N_SAMPLES);
 #if DEBUG
   Serial.printf("Battery Voltage: %0.3f\n", voltage);
 #endif
-  if (voltage < MIN_VOLTAGE) {
-    if (second) {
+  if (voltage < MIN_VOLTAGE)
+  {
+    if (second)
+    {
       enviarEventoCadeadoBateriaBaixa();
       dormirESP();
-    } else {
-      delay(100);
+    }
+    else
+    {
+      delay(50);
       checkBatteryStatus(true);
     }
   }
-
-
 }
 int oldVoltage = 0;
-float getBatteryVoltage(int nSamples) {
+float getBatteryVoltage(int nSamples)
+{
   int voltage = 0;
-  for (int i = 0; i < nSamples; i++) {
+  int maxv = -1, minv = -1;
+  for (int i = 0; i < nSamples; i++)
+  {
     voltage += analogRead(BAT_CHECK_PIN);
-    delay(5);
+    delay(25);
   }
   voltage = voltage / nSamples;
-  if (oldVoltage > 0) {
+  if (oldVoltage > 0)
+  {
     oldVoltage = voltage;
-  } else {
-    oldVoltage = oldVoltage * 0.2 + voltage * 0.8;
+  }
+  else
+  {
+    oldVoltage = oldVoltage * 0.9 + voltage * 0.1;
   }
   return BAT_CHECK_CAL * oldVoltage;
 }
 
-
-void dormirESP() {
+void dormirESP()
+{
 #if DEBUG
   Serial.println("Entrando em modo deep sleep");
 #endif
-  esp_deep_sleep_start();
+  //esp_deep_sleep_start();
 }
 
-void checkForConfigUpdate() {
+void checkForConfigUpdate()
+{
   delay(1000);
+
   if (digitalRead(BTN_PIN) == HIGH)
   {
-
+    abrirCadeado();
+    delay(250);
+    fecharCadeado();
     while (1)
     {
 #if DEBUG
