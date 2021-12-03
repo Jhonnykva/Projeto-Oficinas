@@ -2,10 +2,12 @@ const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/asyncHandler');
 const Cadeado = require('../models/Cadeado');
 const Evento = require('../models/Evento');
+const Usuario = require('../models/Usuario');
 const mongoose = require('mongoose');
 const QrCode = require('qrcode');
 const { query } = require('express');
 const { sendNotification } = require('../mail/sendNotification');
+
 
 // @description   Retorna todos os eventos do cadeado
 // @route         GET /evento?id_cadeado=
@@ -67,7 +69,7 @@ exports.registerEventoPredeterminado = asyncHandler(async (req, res, next) => {
         id_usuario: cadeado.id_usuario,
         id_cadeado: req.cadeado.id,
         titulo: 'Bateria fraca',
-        info: `O cadeado ${req.cadeado.id} foi desligado, pois foi detectado um baixo nível de carga.`,
+        info: `O cadeado ${req.cadeado.nome} foi desligado, pois foi detectado um baixo nível de carga.`,
         tipo: 'critical',
       });
       break;
@@ -77,7 +79,7 @@ exports.registerEventoPredeterminado = asyncHandler(async (req, res, next) => {
         id_usuario: cadeado.id_usuario,
         id_cadeado: req.cadeado.id,
         titulo: 'Movimento inesperado detectado',
-        info: `O cadeado ${req.cadeado.id} detectou movimentos inesperados. Possível manipulação não autorizada.`,
+        info: `O cadeado ${req.cadeado.nome} detectou movimentos inesperados. Possível manipulação não autorizada.`,
         tipo: 'critical',
       });
       break;
