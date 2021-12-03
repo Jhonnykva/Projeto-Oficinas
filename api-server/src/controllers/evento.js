@@ -5,6 +5,7 @@ const Evento = require('../models/Evento');
 const mongoose = require('mongoose');
 const QrCode = require('qrcode');
 const { query } = require('express');
+const { sendNotification } = require('../mail/sendNotification');
 
 // @description   Retorna todos os eventos do cadeado
 // @route         GET /evento?id_cadeado=
@@ -46,7 +47,7 @@ exports.registerEvento = asyncHandler(async (req, res, next) => {
   res.status(200).json({ data: evento });
 });
 
-// @description   Registra evento predeterminados
+// @description   Registra eventos predeterminados
 // @route         POST /evento/p/:id_tipo_evento
 // @access        Privada
 exports.registerEventoPredeterminado = asyncHandler(async (req, res, next) => {
@@ -65,8 +66,8 @@ exports.registerEventoPredeterminado = asyncHandler(async (req, res, next) => {
       evento = await Evento.create({
         id_usuario: cadeado.id_usuario,
         id_cadeado: req.cadeado.id,
-        titulo: 'Bateria agotada',
-        info: `O cadeado ${req.cadeado.id} foi desligado, logo de detectar um baixo nível de carga.`,
+        titulo: 'Bateria fraca',
+        info: `O cadeado ${req.cadeado.id} foi desligado, pois foi detectado um baixo nível de carga.`,
         tipo: 'critical',
       });
       break;
@@ -90,6 +91,12 @@ exports.registerEventoPredeterminado = asyncHandler(async (req, res, next) => {
       return next(
         new ErrorResponse(`Tipo evento ${idTipoEvento} inválido`, 400)
       );
+  }
+  if (evento !== null) {
+    const user = await Usuario.findById(evento.id_usuario).select('email');
+    if (user !== null){
+      sendNotification(user.email, evento.titulo, evento.info);
+    }
   }
 
   res.status(200).json({ data: evento ? evento.id : null });

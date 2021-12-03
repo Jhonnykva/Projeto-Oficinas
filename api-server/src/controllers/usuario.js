@@ -2,7 +2,7 @@ const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/asyncHandler');
 const Usuario = require('../models/Usuario');
 
-// @description   Retorna toke de acesso para usuario válido
+// @description   Retorna token de acesso para usuário válido
 // @route         POST /usuario/login
 // @access        Publico
 exports.login = asyncHandler(async (req, res, next) => {
