@@ -8,7 +8,6 @@ const QrCode = require('qrcode');
 const { query } = require('express');
 const { sendNotification } = require('../mail/sendNotification');
 
-
 // @description   Retorna todos os eventos do cadeado
 // @route         GET /evento?id_cadeado=
 // @access        Privada
@@ -62,26 +61,31 @@ exports.registerEventoPredeterminado = asyncHandler(async (req, res, next) => {
 
   if (!cadeado) return next(new ErrorResponse('Não autorizado'), 401);
 
-  let evento = null;
+  let evento = await Evento.findOne({
+    id_cadeado: cadeado._id,
+    createdAt: { $gt: new Date(Date.now() - 1000 * 15) },
+  }).sort('-createdAt');
+
+  let eventoObj = null;
   switch (idTipoEvento) {
     case '410':
-      evento = await Evento.create({
+      eventoObj = {
         id_usuario: cadeado.id_usuario,
         id_cadeado: req.cadeado.id,
         titulo: 'Bateria fraca',
         info: `O cadeado ${req.cadeado.nome} foi desligado, pois foi detectado um baixo nível de carga.`,
         tipo: 'critical',
-      });
+      };
       break;
     // Giroscopio detectou movimento não esperado
     case '404':
-      evento = await Evento.create({
+      eventoObj = {
         id_usuario: cadeado.id_usuario,
         id_cadeado: req.cadeado.id,
         titulo: 'Movimento inesperado detectado',
         info: `O cadeado ${req.cadeado.nome} detectou movimentos inesperados. Possível manipulação não autorizada.`,
         tipo: 'critical',
-      });
+      };
       break;
     case '402':
       break;
@@ -94,9 +98,11 @@ exports.registerEventoPredeterminado = asyncHandler(async (req, res, next) => {
         new ErrorResponse(`Tipo evento ${idTipoEvento} inválido`, 400)
       );
   }
-  if (evento !== null) {
+
+  if (eventoObj !== null && eventoObj.titulo !== evento?.titulo) {
+    evento = await Evento.create(eventoObj);
     const user = await Usuario.findById(evento.id_usuario).select('email');
-    if (user !== null){
+    if (user !== null) {
       sendNotification(user.email, evento.titulo, evento.info);
     }
   }

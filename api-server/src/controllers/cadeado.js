@@ -221,8 +221,9 @@ exports.getcadeadoConfigQR = asyncHandler(async (req, res, next) => {
     `${cadeado.public_key}:${cadeado.private_key}`
   ).toString('base64');
 
-  const ssid = process.env.DEFAULT_WIFI_SSID | 'Test'; // req.body.ssid
-  const pass = process.env.DEFAULT_WIFI_PASS | 'test123456'; // req.body.pass
+  const ssid = process.env.DEFAULT_WIFI_SSID || 'Test'; // req.body.ssid
+  const pass = process.env.DEFAULT_WIFI_PASS || 'test123456'; // req.body.pass
+  console.log(`${token}\n${ssid}\n${pass}\n`);
   const qr = await QrCode.toDataURL(`${token}\n${ssid}\n${pass}\n`, {
     errorCorrectionLevel: 'H',
     width: 500,
