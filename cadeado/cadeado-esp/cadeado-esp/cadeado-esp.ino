@@ -12,11 +12,11 @@
 #define EEPROM_LENGTH 1024
 
 // Controle de tensão da bateria
-#define CHECK_BATTERY 0
+#define CHECK_BATTERY 1
 #define BAT_CHECK_PIN 33
 #define BAT_CHECK_N_SAMPLES 30
 #define BAT_CHECK_CAL 0.00477401
-#define MIN_VOLTAGE 7.2
+#define MIN_VOLTAGE 7.3
 
 // Definições de pinos internos
 #define DEBUG 1
@@ -38,7 +38,7 @@ bool btnStatus = false;
 // Controle servo
 #define PIN_SERVO 13
 #define CLOSE_POS 0
-#define OPEN_POS 90
+#define OPEN_POS 30
 Servo servo;
 int pos = -1;
 
@@ -56,8 +56,8 @@ String authString = "--`";
 WiFiClient client;
 
 // Parametros WiFi
-String ssid = "--";
-String pass = "--";
+String ssid = "";
+String pass = "";
 
 void setup()
 {
@@ -98,7 +98,7 @@ void setup()
   checkForConfigUpdate();
 }
 
-void checkBatteryStatus(bool);
+void checkBatteryStatus();
 bool desbloqueado = false;
 void loop()
 {
@@ -161,7 +161,7 @@ void loop()
     // Verifica movimento caso o cadeado esteja bloqueado
     executarMPU();
   }
-  checkBatteryStatus(false);
+  checkBatteryStatus();
   if (!running)
   {
     delay(250);
@@ -171,7 +171,7 @@ void loop()
 void setupWifi()
 {
   WiFi.mode(WIFI_STA);
-  WiFi.begin("GV_K","ckd5998506");//ssid.c_str(), pass.c_str());
+  WiFi.begin(ssid.c_str(), pass.c_str());
   Serial.print("Connecting to WiFi ..");
   int cwi = 0;
   unsigned int timeWaited = 0;
@@ -579,7 +579,7 @@ void iniciaCamera()
     s->set_saturation(s, -2); // lower the saturation
   }
   // drop down frame size for higher initial frame rate
-  s->set_framesize(s, FRAMESIZE_QVGA);
+  s->set_framesize(s, FRAMESIZE_VGA);
 }
 
 void carregarEEPROM()
@@ -895,7 +895,7 @@ bool cadeadoMovendo()
 
   // A variável error é utilizada para evitar a deteção de flutuações
   // Talvez seja necessário mudar o valor dela dependendo dos testes
-  float error = 0.1;
+  float error = 0.25;
 #if 0 && DEBUG
   Serial.println(" A  " + String(a.acceleration.x) + " " + String(a.acceleration.y) + " " + String(a.acceleration.z));
   Serial.println("<A> " + String(ax) + " " + String(ay) + " " + String(az));
@@ -929,7 +929,7 @@ bool cadeadoGirando()
 
   // A variável error é utilizada para evitar a deteção de flutuações
   // Talvez seja necessário mudar o valor dela dependendo dos testes
-  float error = 0.1;
+  float error = 0.25;
 
   if (gx != 0 && pow(gx - abs(g.gyro.x), 2) / gx > error)
   {
@@ -947,35 +947,30 @@ bool cadeadoGirando()
   return false;
 }
 
-// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/gpio.html
-// https://github.com/espressif/esp-who/issues/90
 void initBtnControl()
 {
-  //  pinMode(BTN_PIN, INPUT);
-
   pinMode(BTN_PIN, OUTPUT);
 }
-void checkBatteryStatus(bool second = false)
+int lowCount = 0;
+void checkBatteryStatus()
 {
   if (!CHECK_BATTERY)
     return;
 
-  float voltage = getBatteryVoltage(second ? BAT_CHECK_N_SAMPLES * 2 : BAT_CHECK_N_SAMPLES);
+  float voltage = getBatteryVoltage(BAT_CHECK_N_SAMPLES);
 #if DEBUG
   Serial.printf("Battery Voltage: %0.3f\n", voltage);
 #endif
   if (voltage < MIN_VOLTAGE)
   {
-    if (second)
+    lowCount++;
+    if (lowCount > 5)
     {
       enviarEventoCadeadoBateriaBaixa();
       dormirESP();
     }
-    else
-    {
-      delay(50);
-      checkBatteryStatus(true);
-    }
+  } else {
+    lowCount = 0;
   }
 }
 int oldVoltage = 0;
@@ -1005,7 +1000,7 @@ void dormirESP()
 #if DEBUG
   Serial.println("Entrando em modo deep sleep");
 #endif
-  //esp_deep_sleep_start();
+  esp_deep_sleep_start();
 }
 
 void checkForConfigUpdate()
