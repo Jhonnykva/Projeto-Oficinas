@@ -2,11 +2,13 @@ const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/asyncHandler');
 const Cadeado = require('../models/Cadeado');
 const Evento = require('../models/Evento');
+const Usuario = require('../models/Usuario');
 const mongoose = require('mongoose');
 const jimp = require('jimp');
 const Liberador = require('../models/Liberador');
 const QrCodeReader = require('qrcode-reader');
 const QrCode = require('qrcode');
+const { sendNotification } = require('../mail/sendNotification');
 
 // @description   Retorna todos os cadeados associados ao usuario
 // @route         GET /cadeado
@@ -111,12 +113,18 @@ exports.bloquearCadeado = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('ID inválido', 400));
 
   let cadeado = await Cadeado.findById(id);
-
   if (!cadeado)
     return next(new ErrorResponse(`Cadeado ${id} não encontrado`, 404));
 
   await Cadeado.findByIdAndUpdate(cadeado._id, { estado: 'Bloqueado' });
-
+  const user = await Usuario.findById(cadeado.id_usuario).select('email');
+  if (user !== null) {
+    sendNotification(
+      user.email,
+      `Cadeado "${cadeado.nome}" bloqueado`,
+      `O cadeado "${cadeado.nome}" foi bloqueado por meio do botão fisico`
+    );
+  }
   res.status(200).json({ estado: cadeado.estado });
 });
 
@@ -268,12 +276,16 @@ exports.checkQrCode = asyncHandler(async (req, res, next) => {
             runValidators: true,
           }
         );
-        await Evento.create({
+        const evento = await Evento.create({
           titulo: `Cadeado Desbloqueado | Liberado por código QR`,
           info: `O cadeado ${req.cadeado.nome} foi Desbloqueado pelo liberador ${liberador.alias} (${liberador.id})`,
           id_cadeado: id,
           id_usuario: req.cadeado.id_usuario,
         });
+        const user = await Usuario.findById(evento.id_usuario).select('email');
+        if (user !== null) {
+          sendNotification(user.email, evento.titulo, evento.info);
+        }
         return res.status(200).json({});
       } else {
         // Liberador inválido
